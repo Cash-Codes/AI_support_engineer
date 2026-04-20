@@ -1,1 +1,2 @@
 # AI_support_engineer
+Agentic support system that accepts a user issues via chat UI, tries to resolve it with docs (RAG), escalates to code inspection returns an explanation + workaround, creates a shortcut bug ticket and creates a fix PR - in progress
