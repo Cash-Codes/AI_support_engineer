@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+data/
+.env
+.env.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+claude-credentials.json
+docs/
