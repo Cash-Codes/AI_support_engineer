@@ -1,0 +1,39 @@
+{
+  "name": "@ai-support/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n loader,app -c cyan,magenta \"pnpm dev:loader\" \"pnpm dev:app\"",
+    "dev:loader": "vite build --config loader/vite.config.ts --watch",
+    "dev:app": "vite --config app/vite.config.ts",
+    "build": "pnpm build:loader && pnpm build:app",
+    "build:loader": "vite build --config loader/vite.config.ts",
+    "build:app": "vite build --config app/vite.config.ts",
+    "typecheck": "tsc -b",
+    "test": "pnpm test:loader && pnpm test:app",
+    "test:loader": "vitest run --config loader/vitest.config.ts",
+    "test:app": "vitest run --config app/vitest.config.ts"
+  },
+  "dependencies": {
+    "@ai-support/shared": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.5"
+  }
+}
