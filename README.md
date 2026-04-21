@@ -5,26 +5,26 @@ Agentic support system. User sends a bug report → docs RAG → optional code i
 ## Quick start
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env
-npm run dev
+pnpm dev
 ```
 
-Frontend on `http://localhost:5173`, backend on `http://localhost:8080`.
+Web app on `http://localhost:5173`, API on `http://localhost:8080`.
 
-## Packages
+## Layout
 
-- `packages/shared` - types shared between frontend and backend
-- `packages/frontend` - React + Vite + Tailwind chat UI
-- `packages/backend` - Node + Express orchestrator
+- `apps/web` - React + Vite + Tailwind chat UI
+- `apps/api` - Node + Express orchestrator
+- `packages/shared` - types shared between web and api
 
 ## Scripts
 
-- `npm run dev` - starts frontend + backend concurrently
-- `npm run build` - builds all packages
-- `npm run test` - runs test suites
-- `npm run lint` - Biome lint check
-- `npm run typecheck` - TypeScript `--noEmit` on all packages
+- `pnpm dev` - starts web + api concurrently
+- `pnpm build` - builds all workspaces
+- `pnpm test` - runs test suites
+- `pnpm lint` - Biome lint check
+- `pnpm typecheck` - TypeScript `--noEmit` across workspaces
 
 ## Architecture
 
