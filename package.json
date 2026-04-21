@@ -1,0 +1,28 @@
+{
+  "name": "ai-support-engineer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic support system — chat UI, docs RAG, code investigation, ticket/PR flow",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "build": "npm run build -w @ai-support/shared && npm run build -w @ai-support/backend && npm run build -w @ai-support/frontend",
+    "test": "npm run test -ws --if-present",
+    "lint": "biome check packages",
+    "format": "biome format --write packages",
+    "typecheck": "npm run typecheck -ws --if-present"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3"
+  }
+}
