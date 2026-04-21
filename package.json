@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "./scripts/dev.sh",
-    "build": "pnpm --filter @ai-support/shared build && pnpm --filter @ai-support/api build && pnpm --filter @ai-support/widget build",
+    "build": "pnpm --filter @ai-support/shared build && pnpm --filter @ai-support/api build && pnpm --filter @ai-support/widget build && pnpm --filter @ai-support/dashboard build",
     "test": "pnpm -r test",
     "lint": "biome check apps packages",
     "format": "biome format --write apps packages",
