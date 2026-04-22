@@ -26,7 +26,7 @@ describe("App (widget)", () => {
       screen.getByRole("button", { name: /close chat/i }),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByText(/describe your issue/i)).toBeInTheDocument(),
+      expect(screen.getByText(/Describe your issue/i)).toBeInTheDocument(),
     );
   });
 });

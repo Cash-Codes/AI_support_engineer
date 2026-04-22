@@ -49,7 +49,7 @@ describe("ChatWindow", () => {
     const user = userEvent.setup();
     render(<ChatWindow />);
 
-    const input = await screen.findByPlaceholderText(/describe the bug/i);
+    const input = await screen.findByPlaceholderText(/Whats the issue/i);
     await waitFor(() => expect(input).toBeEnabled());
 
     await user.type(input, "refund missing");

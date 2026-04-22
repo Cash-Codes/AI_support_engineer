@@ -22,9 +22,11 @@ export function ChatWindow() {
     <div className="flex h-full flex-col bg-slate-50">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
         <div>
-          <h1 className="text-sm font-semibold text-slate-900">AI Support</h1>
+          <h1 className="text-sm font-semibold text-slate-900">
+            AI Support Engineer
+          </h1>
           <p className="text-[11px] text-slate-500">
-            {state === "initializing" ? "connecting..." : "describe your issue"}
+            {state === "initializing" ? "connecting..." : "Describe your issue"}
           </p>
         </div>
         <button
@@ -40,7 +42,7 @@ export function ChatWindow() {
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.length === 0 ? (
           <p className="text-center text-xs text-slate-400">
-            Start by describing a bug you're seeing.
+            How can I help! start by describing your issue.
           </p>
         ) : null}
         {messages.map((m) => (
@@ -73,7 +75,7 @@ export function ChatWindow() {
       >
         <input
           className="flex-1 rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-          placeholder="Describe the bug..."
+          placeholder="Whats the issue..."
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           disabled={state === "streaming" || state === "initializing"}

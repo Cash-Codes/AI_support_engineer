@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Host Page Simulation</title>
+    <style>
+      :root {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        padding: 48px 24px 120px;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 8px;
+      }
+      p {
+        color: #475569;
+        line-height: 1.55;
+      }
+      .hint {
+        margin-top: 24px;
+        padding: 12px 16px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Host Page Simulation</h1>
+      <p>
+        This page simulates a real product embedding the AI Support widget.
+        In production, the <code>&lt;script&gt;</code> tag below lives inside
+        the app, here it's inline so we can smoke test the widget E2E.
+      </p>
+      <div class="hint">
+        Session dashboard at 
+        <code>http://localhost:5174</code>.
+      </div>
+    </main>
+
+    <!-- Loader script — in prod this comes from the api/Cloud Run URL. -->
+    <script
+      src="http://localhost:8080/widget/loader.js"
+      data-api-base="http://localhost:8080"
+      data-product="ai_support_agents_product"
+    ></script>
+  </body>
+</html>
