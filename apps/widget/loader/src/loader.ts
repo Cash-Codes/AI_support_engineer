@@ -24,30 +24,97 @@ export function injectStyles(doc: Document): void {
       z-index: 2147483646;
       width: 56px;
       height: 56px;
-      border-radius: 9999px;
+      padding: 0;
       border: none;
+      border-radius: 9999px;
       background: #0f172a;
       color: white;
-      font-size: 24px;
+      font-size: 26px;
+      line-height: 1;
       cursor: pointer;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      display: grid;
+      place-items: center;
+      box-shadow:
+        0 10px 25px -5px rgba(15, 23, 42, 0.35),
+        0 2px 6px rgba(15, 23, 42, 0.25);
+      animation: ai-support-float 4s ease-in-out infinite;
+      transition:
+        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.25s ease,
+        background 0.25s ease,
+        opacity 0.2s ease;
     }
+    .ai-support-widget-launcher[data-open="true"] {
+      opacity: 0;
+      transform: scale(0.8);
+      pointer-events: none;
+    }
+    .ai-support-widget-launcher::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(99,102,241,0.35), transparent 70%);
+      opacity: 0.6;
+      z-index: -1;
+      animation: ai-support-halo 3s ease-in-out infinite;
+    }
+    .ai-support-widget-launcher:hover {
+      transform: translateY(-3px) scale(1.05);
+      background: #1e293b;
+      box-shadow:
+        0 14px 30px -6px rgba(15, 23, 42, 0.45),
+        0 3px 8px rgba(15, 23, 42, 0.3);
+    }
+    .ai-support-widget-launcher:active {
+      transform: translateY(-1px) scale(1);
+    }
+    .ai-support-widget-launcher:focus-visible {
+      outline: 2px solid #a5b4fc;
+      outline-offset: 3px;
+    }
+    @keyframes ai-support-float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+    @keyframes ai-support-halo {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50%      { opacity: 0.75; transform: scale(1.08); }
+    }
+
     .ai-support-widget-frame {
       position: fixed;
       right: 24px;
-      bottom: 96px;
+      bottom: 24px;
       z-index: 2147483647;
       width: 380px;
       height: 560px;
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - 48px);
       border: none;
       border-radius: 16px;
-      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35);
       background: white;
-      display: none;
+      box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.35);
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+      transform-origin: bottom right;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .ai-support-widget-frame[data-open="true"] {
-      display: block;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ai-support-widget-launcher,
+      .ai-support-widget-launcher::before,
+      .ai-support-widget-frame {
+        animation: none !important;
+        transition: none !important;
+      }
     }
   `;
   doc.head.appendChild(style);
@@ -68,7 +135,8 @@ export function mount(
   button.className = "ai-support-widget-launcher";
   button.type = "button";
   button.setAttribute("aria-label", "Open support chat");
-  button.textContent = "💬";
+  button.dataset.open = "false";
+  button.innerHTML = '<span aria-hidden="true">💬</span>';
 
   const iframe = doc.createElement("iframe");
   iframe.className = "ai-support-widget-frame";
@@ -78,9 +146,17 @@ export function mount(
   iframe.src = iframeUrl.toString();
   iframe.dataset.open = "false";
 
+  const setOpen = (open: boolean) => {
+    iframe.dataset.open = String(open);
+    button.dataset.open = String(open);
+    button.setAttribute(
+      "aria-label",
+      open ? "Close support chat" : "Open support chat",
+    );
+  };
+
   button.addEventListener("click", () => {
-    const isOpen = iframe.dataset.open === "true";
-    iframe.dataset.open = String(!isOpen);
+    setOpen(iframe.dataset.open !== "true");
   });
 
   const win = doc.defaultView;
@@ -89,7 +165,7 @@ export function mount(
       if (event.source !== iframe.contentWindow) return;
       const data = event.data as { type?: string } | null;
       if (!data || typeof data.type !== "string") return;
-      if (data.type === "ai-support:close") iframe.dataset.open = "false";
+      if (data.type === "ai-support:close") setOpen(false);
     });
   }
 

@@ -4,6 +4,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   root: __dirname,
+  // The iframe app is served under /widget/ by the api's static route.
+  // Without this, built HTML references /assets/... at the domain root
+  // and the browser 404s them.
+  base: "/widget/",
   server: {
     port: 5173,
     proxy: {

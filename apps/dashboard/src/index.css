@@ -1,6 +1,39 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --canvas: #f7f7f8;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+
+  --line: #e5e5e7;
+  --line-strong: #d4d4d8;
+
+  --fg-0: #111114;
+  --fg-1: #3f3f46;
+  --fg-2: #71717a;
+  --fg-3: #a1a1aa;
+
+  --brand: #3b4b78;
+  --brand-weak: #e8ecf5;
+  --brand-hover: #2f3d63;
+
+  --success: #15803d;
+  --success-weak: #dcfce7;
+  --warning: #a16207;
+  --warning-weak: #fef3c7;
+  --danger: #b91c1c;
+  --danger-weak: #fee2e2;
+  --info: #1e40af;
+  --info-weak: #dbeafe;
+
+  --shadow-sm: 0 1px 2px rgba(15, 15, 20, 0.04);
+  --shadow-md: 0 1px 2px rgba(15, 15, 20, 0.05), 0 4px 10px -4px
+    rgba(15, 15, 20, 0.08);
+}
 
 html,
 body,
@@ -9,7 +42,60 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    sans-serif;
+  background: var(--canvas);
+  color: var(--fg-0);
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01";
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono,
+.font-mono * {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  font-feature-settings: "zero";
+}
+
+/* Subtle entrance for lists — no stagger dance, just a quiet fade */
+.fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in {
+    animation: none !important;
+  }
+}
+
+/* Scrollbar — subtle, enterprise */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 9999px;
+  border: 2px solid var(--canvas);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-3);
+}
+
+::selection {
+  background: var(--brand-weak);
+  color: var(--fg-0);
 }
