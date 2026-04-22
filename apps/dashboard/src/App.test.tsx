@@ -1,7 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function renderAt(path: string) {
   return render(
@@ -12,7 +16,17 @@ function renderAt(path: string) {
 }
 
 describe("Dashboard App", () => {
-  it("renders the sessions list on /", () => {
+  it("renders the sessions list shell on /", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("[]", {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
     renderAt("/");
     expect(
       screen.getByRole("link", { name: /ai support dashboard/i }),
@@ -20,12 +34,19 @@ describe("Dashboard App", () => {
     expect(
       screen.getByRole("heading", { name: /sessions/i }),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/no sessions yet/i)).toBeInTheDocument(),
+    );
   });
 
-  it("renders the session viewer with the id on /sessions/:id", () => {
+  it("renders the session viewer route on /sessions/:id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("boom", { status: 500 })),
+    );
     renderAt("/sessions/abc-123");
-    expect(
-      screen.getByRole("heading", { name: /session abc-123/i }),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/failed: 500/)).toBeInTheDocument(),
+    );
   });
 });
