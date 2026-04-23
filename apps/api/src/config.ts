@@ -29,6 +29,8 @@ const EnvSchema = z.object({
     .transform((v) => v === "true"),
   PRODUCT_REPO_PATH: z.string().optional(),
   PRODUCT_REPO_URL: z.string().optional(),
+  DOCS_DIR: z.string().optional(),
+  RAG_CACHE_PATH: z.string().optional(),
   WIDGET_ALLOWED_ORIGINS: z.string().optional(),
   DASHBOARD_ORIGIN: z.string().optional(),
   SHORTCUT_API_TOKEN: z.string().optional(),
@@ -45,6 +47,7 @@ export interface AppConfig {
   demoMode: boolean;
   enablePrFlow: boolean;
   productRepo: { path?: string; url?: string };
+  rag: { docsDir?: string; cachePath?: string };
   cors: { widgetOrigins: string[]; dashboardOrigin?: string };
   claude: { mode: "live" | "mock" };
   shortcut:
@@ -85,6 +88,10 @@ export function parseConfig(raw: NodeJS.ProcessEnv): AppConfig {
     productRepo: {
       path: env.PRODUCT_REPO_PATH,
       url: env.PRODUCT_REPO_URL,
+    },
+    rag: {
+      docsDir: env.DOCS_DIR,
+      cachePath: env.RAG_CACHE_PATH,
     },
     cors: {
       widgetOrigins: csv(env.WIDGET_ALLOWED_ORIGINS),

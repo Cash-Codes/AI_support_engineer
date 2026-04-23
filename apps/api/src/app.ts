@@ -2,6 +2,7 @@ import cors from "cors";
 import express, { type Express, Router } from "express";
 import type { AppConfig } from "./config.js";
 import type { Logger } from "./logger.js";
+import type { Retriever } from "./rag/indexer.js";
 import { buildChatRouter } from "./routes/chat.js";
 import { buildDemoRouter } from "./routes/demo.js";
 import { buildHealthRouter } from "./routes/health.js";
@@ -17,6 +18,8 @@ export interface CreateAppDeps {
   logger: Logger;
   /** Injectable for tests; defaults to a fresh in-memory store. */
   sessions?: SessionStore;
+  /** Injectable for tests. When absent, the pipeline uses the stub. */
+  retriever?: Retriever;
   /** Skips static /widget/* and /demo/* mounting — useful in tests. */
   skipWidgetStatic?: boolean;
 }
@@ -25,6 +28,7 @@ export function createApp({
   config,
   logger,
   sessions = new SessionStore(),
+  retriever,
   skipWidgetStatic = false,
 }: CreateAppDeps): Express {
   const app = express();
@@ -49,7 +53,7 @@ export function createApp({
   const widgetRouter: ReturnType<typeof Router> = Router();
   widgetRouter.use(widgetCors);
   widgetRouter.use(buildSessionInitRouter(sessions));
-  widgetRouter.use(buildChatRouter({ config, logger, sessions }));
+  widgetRouter.use(buildChatRouter({ config, logger, sessions, retriever }));
   if (!skipWidgetStatic) {
     widgetRouter.use(buildWidgetRouter());
     widgetRouter.use(buildDemoRouter());
@@ -59,7 +63,7 @@ export function createApp({
   // Dashboard-facing routes: health + /sessions reads.
   const dashboardRouter: ReturnType<typeof Router> = Router();
   dashboardRouter.use(dashboardCors);
-  dashboardRouter.use(buildHealthRouter(config));
+  dashboardRouter.use(buildHealthRouter(config, retriever));
   dashboardRouter.use(buildSessionReadRouter(sessions));
   app.use(dashboardRouter);
 

@@ -4,7 +4,8 @@ import { Router, type Router as RouterType } from "express";
 import { z } from "zod";
 import type { AppConfig } from "../config.js";
 import type { Logger } from "../logger.js";
-import { runPipeline } from "../orchestrator/index.js";
+import { type PipelineOverrides, runPipeline } from "../orchestrator/index.js";
+import type { Retriever } from "../rag/indexer.js";
 import type { SessionStore } from "../sessions/store.js";
 
 const ChatBody = z.object({
@@ -22,11 +23,20 @@ export interface ChatRouterDeps {
   config: AppConfig;
   logger: Logger;
   sessions: SessionStore;
+  retriever?: Retriever;
 }
 
 export function buildChatRouter(deps: ChatRouterDeps): RouterType {
-  const { config, logger, sessions } = deps;
+  const { config, logger, sessions, retriever } = deps;
   const router: RouterType = Router();
+
+  const overrides: PipelineOverrides | undefined = retriever
+    ? {
+        docsRetrieval: async (intake) => ({
+          docs: await retriever.search(intake.normalized, 5),
+        }),
+      }
+    : undefined;
 
   router.post("/chat", async (req, res) => {
     const parsed = ChatBody.safeParse(req.body);
@@ -71,6 +81,7 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
           flags: { prFlow: config.enablePrFlow },
           emit,
           logger,
+          overrides,
         },
       );
       sessions.appendMessage(sessionId, response.assistantMessage);
@@ -120,6 +131,7 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
           flags: { prFlow: config.enablePrFlow },
           emit: () => undefined,
           logger,
+          overrides,
         },
       );
       sessions.appendMessage(sessionId, response.assistantMessage);
