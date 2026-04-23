@@ -2,7 +2,13 @@ import { randomUUID } from "node:crypto";
 import type { ChatMessage, ChatResponse, PhaseEvent } from "@ai-support/shared";
 import { Router, type Router as RouterType } from "express";
 import { z } from "zod";
+import type { ClaudeClient } from "../clients/claude.js";
 import type { AppConfig } from "../config.js";
+import {
+  type FixtureLibrary,
+  buildMockPR,
+  buildMockTicket,
+} from "../fixtures/index.js";
 import type { Logger } from "../logger.js";
 import { type PipelineOverrides, runPipeline } from "../orchestrator/index.js";
 import type { Retriever } from "../rag/indexer.js";
@@ -24,19 +30,19 @@ export interface ChatRouterDeps {
   logger: Logger;
   sessions: SessionStore;
   retriever?: Retriever;
+  claude?: ClaudeClient;
+  fixtures?: FixtureLibrary;
 }
 
 export function buildChatRouter(deps: ChatRouterDeps): RouterType {
-  const { config, logger, sessions, retriever } = deps;
+  const { config, logger, sessions, retriever, claude, fixtures } = deps;
   const router: RouterType = Router();
 
-  const overrides: PipelineOverrides | undefined = retriever
-    ? {
-        docsRetrieval: async (intake) => ({
-          docs: await retriever.search(intake.normalized, 5),
-        }),
-      }
-    : undefined;
+  const overrides = buildPipelineOverrides({
+    retriever,
+    claude,
+    fixtures,
+  });
 
   router.post("/chat", async (req, res) => {
     const parsed = ChatBody.safeParse(req.body);
@@ -149,4 +155,71 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
   });
 
   return router;
+}
+
+interface OverridesDeps {
+  retriever?: Retriever;
+  claude?: ClaudeClient;
+  fixtures?: FixtureLibrary;
+}
+
+function buildPipelineOverrides(
+  deps: OverridesDeps,
+): PipelineOverrides | undefined {
+  const { retriever, claude, fixtures } = deps;
+  const hasAny = retriever || claude || fixtures;
+  if (!hasAny) return undefined;
+
+  const overrides: PipelineOverrides = {};
+
+  if (retriever) {
+    overrides.docsRetrieval = async (intake) => ({
+      docs: await retriever.search(intake.normalized, 5),
+    });
+  }
+
+  if (claude) {
+    overrides.router = (intake, retrieved) => claude.route(intake, retrieved);
+    overrides.codeInvestigation = (intake, retrieved) =>
+      claude.investigate(intake, retrieved);
+    overrides.resolution = (intake, retrieved, decision, investigation) =>
+      claude.synthesize(intake, retrieved, decision, investigation);
+  }
+
+  if (fixtures) {
+    // Ticket + PR metadata come from whichever fixture matched the intake.
+    overrides.ticketing = async (resolution) => {
+      const fix = findFixtureByResolution(fixtures, resolution);
+      return buildMockTicket(fix ?? fixtures.fallback());
+    };
+    overrides.openFixPR = async (resolution) => {
+      const fix = findFixtureByResolution(fixtures, resolution);
+      return fix ? (buildMockPR(fix) ?? null) : null;
+    };
+  }
+
+  return overrides;
+}
+
+/**
+ * Matches the resolution back to a fixture via its citations. Fixtures cite
+ * doc filenames; we correlate by citation membership. Falls back to the
+ * first fixture whose explanation prefix matches — best-effort, only used
+ * for ticket/PR metadata.
+ */
+function findFixtureByResolution(
+  fixtures: FixtureLibrary,
+  resolution: { explanation: string; citations: string[] },
+) {
+  const all = fixtures.all();
+  for (const f of all) {
+    if (f.resolution.explanation === resolution.explanation) return f;
+  }
+  for (const f of all) {
+    const overlap = f.resolution.citations.some((c) =>
+      resolution.citations.includes(c),
+    );
+    if (overlap) return f;
+  }
+  return undefined;
 }
