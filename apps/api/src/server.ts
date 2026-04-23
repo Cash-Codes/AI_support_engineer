@@ -76,8 +76,12 @@ if (claudeMode === "live" && productRepo.path) {
   claude = createLiveClaudeClient({
     productRepoPath: productRepo.path,
     credentialsPath: CLAUDE_CREDENTIALS_PATH,
+    logger,
   });
-  logger.info("claude: live CLI client active");
+  logger.info(
+    { productRepoPath: productRepo.path },
+    "claude: live CLI client active",
+  );
 } else if (fixtures) {
   claude = createMockClaudeClient(fixtures);
   logger.info(
