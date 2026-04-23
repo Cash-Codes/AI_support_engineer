@@ -63,8 +63,7 @@ export interface CreateLiveClaudeClientOptions {
  *
  * Authentication is handled by the CLI itself via the OAuth credentials
  * file at `/root/.claude/.credentials.json`. We do not inject an
- * ANTHROPIC_API_KEY — this matches the sibling AI_codeme_orchestrator
- * pattern and is what Cloud Run will use in production.
+ * ANTHROPIC_API_KEY and is what Cloud Run will use in production.
  */
 export function createLiveClaudeClient(
   opts: CreateLiveClaudeClientOptions,
