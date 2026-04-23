@@ -1,8 +1,18 @@
-import type { RouterDecision } from "@ai-support/shared";
+import type { Confidence, RouterDecision } from "@ai-support/shared";
+import type { Logger } from "../logger.js";
 import type { CodeInvestigationResult } from "../orchestrator/codeInvestigation.js";
 import type { DocsRetrievalResult } from "../orchestrator/docsRetrieval.js";
 import type { IntakeResult } from "../orchestrator/intake.js";
 import type { ResolutionResult } from "../orchestrator/resolution.js";
+import { extractLastJsonBlock } from "./claude/parse.js";
+import {
+  buildInvestigationPrompt,
+  buildResolutionPrompt,
+  buildRouterPrompt,
+} from "./claude/prompts.js";
+import { spawnClaude } from "./claude/spawn.js";
+
+const VALID_CONFIDENCE = new Set<Confidence>(["low", "medium", "high"]);
 
 /**
  * ClaudeClient isolates all reasoning steps that are (eventually) powered by
@@ -34,30 +44,151 @@ export interface ClaudeClient {
   mode: "live" | "mock";
 }
 
-/**
- * Placeholder for the real Claude Code CLI client. The wiring follows the
- * pattern from the sibling `AI_codeme_orchestrator` repo: spawn the CLI as
- * a subprocess with read-only tools pointed at the product repo cwd, write
- * the prompt to stdin, parse a structured JSON block out of stdout.
- *
- * Implementation is scaffolded but intentionally stubbed — real CLI
- * integration is verified manually in a follow-up session. For automated
- * tests and local demo runs, the mock client is used.
- */
-export function createLiveClaudeClient(_opts: {
+export interface CreateLiveClaudeClientOptions {
   productRepoPath: string;
   credentialsPath: string;
-}): ClaudeClient {
+  logger?: Logger;
+  /** Override timeouts per phase (ms) — useful for tests / tight demos. */
+  timeouts?: {
+    router?: number;
+    investigate?: number;
+    synthesize?: number;
+  };
+}
+
+/**
+ * Live Claude Code CLI client. Each phase spawns `claude --print` as a
+ * subprocess, pipes a phase-specific prompt to stdin, and parses the final
+ * ```json block from stdout.
+ *
+ * Authentication is handled by the CLI itself via the OAuth credentials
+ * file at `/root/.claude/.credentials.json`. We do not inject an
+ * ANTHROPIC_API_KEY and is what Cloud Run will use in production.
+ */
+export function createLiveClaudeClient(
+  opts: CreateLiveClaudeClientOptions,
+): ClaudeClient {
+  const { productRepoPath, logger } = opts;
+  const tRouter = opts.timeouts?.router ?? 30_000;
+  const tInvestigate = opts.timeouts?.investigate ?? 120_000;
+  const tSynthesize = opts.timeouts?.synthesize ?? 30_000;
+
   return {
     mode: "live",
-    async route(): Promise<RouterDecision> {
-      throw new Error("live Claude CLI integration not yet implemented");
+
+    async route(intake, retrieved): Promise<RouterDecision> {
+      const { stdout } = await spawnClaude({
+        prompt: buildRouterPrompt(intake, retrieved),
+        cwd: productRepoPath,
+        allowedTools: [], // pure reasoning — no tool use
+        maxTurns: 4,
+        timeoutMs: tRouter,
+        logger,
+        tag: "router",
+      });
+      const parsed = extractLastJsonBlock<Partial<RouterDecision>>(stdout);
+      if (!parsed.ok || !parsed.data) {
+        throw new Error(`claude router: ${parsed.reason ?? "parse failed"}`);
+      }
+      return normalizeRouter(parsed.data);
     },
-    async investigate(): Promise<CodeInvestigationResult> {
-      throw new Error("live Claude CLI integration not yet implemented");
+
+    async investigate(intake, retrieved): Promise<CodeInvestigationResult> {
+      const { stdout } = await spawnClaude({
+        prompt: buildInvestigationPrompt(intake, retrieved),
+        cwd: productRepoPath,
+        allowedTools: ["Read", "Grep", "Glob"],
+        maxTurns: 30,
+        timeoutMs: tInvestigate,
+        logger,
+        tag: "investigate",
+      });
+      const parsed =
+        extractLastJsonBlock<Partial<CodeInvestigationResult>>(stdout);
+      if (!parsed.ok || !parsed.data) {
+        throw new Error(
+          `claude investigate: ${parsed.reason ?? "parse failed"}`,
+        );
+      }
+      return normalizeInvestigation(parsed.data);
     },
-    async synthesize(): Promise<ResolutionResult> {
-      throw new Error("live Claude CLI integration not yet implemented");
+
+    async synthesize(
+      intake,
+      retrieved,
+      decision,
+      investigation,
+    ): Promise<ResolutionResult> {
+      const { stdout } = await spawnClaude({
+        prompt: buildResolutionPrompt(
+          intake,
+          retrieved,
+          decision,
+          investigation,
+        ),
+        cwd: productRepoPath,
+        allowedTools: [], // synthesis only — no tool use
+        maxTurns: 4,
+        timeoutMs: tSynthesize,
+        logger,
+        tag: "synthesize",
+      });
+      const parsed = extractLastJsonBlock<Partial<ResolutionResult>>(stdout);
+      if (!parsed.ok || !parsed.data) {
+        throw new Error(
+          `claude synthesize: ${parsed.reason ?? "parse failed"}`,
+        );
+      }
+      return normalizeResolution(parsed.data);
     },
+  };
+}
+
+function normalizeConfidence(
+  raw: unknown,
+  fallback: Confidence = "low",
+): Confidence {
+  if (typeof raw === "string" && VALID_CONFIDENCE.has(raw as Confidence)) {
+    return raw as Confidence;
+  }
+  return fallback;
+}
+
+function normalizeRouter(d: Partial<RouterDecision>): RouterDecision {
+  return {
+    escalate: Boolean(d.escalate),
+    rationale: typeof d.rationale === "string" ? d.rationale : "",
+    confidence: normalizeConfidence(d.confidence),
+    draftAnswer: typeof d.draftAnswer === "string" ? d.draftAnswer : undefined,
+  };
+}
+
+function normalizeInvestigation(
+  d: Partial<CodeInvestigationResult>,
+): CodeInvestigationResult {
+  const affectedFiles = Array.isArray(d.affectedFiles)
+    ? (d.affectedFiles as unknown[]).filter(
+        (x): x is string => typeof x === "string",
+      )
+    : [];
+  return {
+    rootCause: typeof d.rootCause === "string" ? d.rootCause : "",
+    affectedFiles,
+    workaround: typeof d.workaround === "string" ? d.workaround : "",
+    confidence: normalizeConfidence(d.confidence),
+  };
+}
+
+function normalizeResolution(d: Partial<ResolutionResult>): ResolutionResult {
+  const citations = Array.isArray(d.citations)
+    ? (d.citations as unknown[]).filter(
+        (x): x is string => typeof x === "string",
+      )
+    : [];
+  return {
+    explanation: typeof d.explanation === "string" ? d.explanation : "",
+    workaround: typeof d.workaround === "string" ? d.workaround : "",
+    confidence: normalizeConfidence(d.confidence),
+    citations,
   };
 }
