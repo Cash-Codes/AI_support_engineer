@@ -1,6 +1,8 @@
 import cors from "cors";
 import express, { type Express, Router } from "express";
+import type { ClaudeClient } from "./clients/claude.js";
 import type { AppConfig } from "./config.js";
+import type { FixtureLibrary } from "./fixtures/index.js";
 import type { Logger } from "./logger.js";
 import type { Retriever } from "./rag/indexer.js";
 import { buildChatRouter } from "./routes/chat.js";
@@ -20,6 +22,10 @@ export interface CreateAppDeps {
   sessions?: SessionStore;
   /** Injectable for tests. When absent, the pipeline uses the stub. */
   retriever?: Retriever;
+  /** Injectable Claude client (live or mock). When absent, pipeline stubs are used. */
+  claude?: ClaudeClient;
+  /** Fixture library — powers the mock client's ticket/PR metadata lookup. */
+  fixtures?: FixtureLibrary;
   /** Skips static /widget/* and /demo/* mounting — useful in tests. */
   skipWidgetStatic?: boolean;
 }
@@ -29,6 +35,8 @@ export function createApp({
   logger,
   sessions = new SessionStore(),
   retriever,
+  claude,
+  fixtures,
   skipWidgetStatic = false,
 }: CreateAppDeps): Express {
   const app = express();
@@ -53,7 +61,9 @@ export function createApp({
   const widgetRouter: ReturnType<typeof Router> = Router();
   widgetRouter.use(widgetCors);
   widgetRouter.use(buildSessionInitRouter(sessions));
-  widgetRouter.use(buildChatRouter({ config, logger, sessions, retriever }));
+  widgetRouter.use(
+    buildChatRouter({ config, logger, sessions, retriever, claude, fixtures }),
+  );
   if (!skipWidgetStatic) {
     widgetRouter.use(buildWidgetRouter());
     widgetRouter.use(buildDemoRouter());
@@ -70,11 +80,12 @@ export function createApp({
   logger.info(
     {
       port: config.port,
-      claude: config.claude.mode,
+      claude: claude?.mode ?? config.claude.mode,
       shortcut: config.shortcut.mode,
       github: config.github.mode,
       demoMode: config.demoMode,
       widgetOriginsConfigured: config.cors.widgetOrigins.length,
+      fixtures: fixtures?.all().length ?? 0,
     },
     "app created",
   );

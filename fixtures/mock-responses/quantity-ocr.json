@@ -1,0 +1,42 @@
+{
+  "slug": "quantity-ocr",
+  "keywords": [
+    "6 eggs",
+    "quantity wrong",
+    "wrong quantity",
+    "only added 1",
+    "said 6 but",
+    "quantity is 1",
+    "quantities are wrong",
+    "handwritten digit"
+  ],
+  "router": {
+    "escalate": true,
+    "rationale": "Docs mention this class of issue but the specific digit-to-letter misread pattern needs code inspection to confirm the parser behavior.",
+    "confidence": "medium"
+  },
+  "codeInvestigation": {
+    "rootCause": "The quantity parser in ocr/parseQuantity.ts discards any token that contains a non-numeric character, which silently drops misread digits like '6' read as 'b'. The fallback path then defaults the quantity to 1 without surfacing that the token was rejected.",
+    "affectedFiles": [
+      "src/ocr/parseQuantity.ts",
+      "src/ocr/confidence.ts",
+      "src/ui/ReviewTable.svelte"
+    ],
+    "workaround": "Edit the quantity inline in the review table before pushing the basket — cells become editable on click.",
+    "confidence": "medium"
+  },
+  "resolution": {
+    "explanation": "When a handwritten digit is misread by the OCR as a letter (commonly 6→b, 7→1), our quantity parser rejects the mixed token and silently falls back to a default of 1. The underlying OCR confidence signal exists but isn't surfaced on the review row, so it looks like a successful parse. The fix would be to (a) detect likely-digit-letter confusions and retry, and (b) mark the row as low-confidence so users are prompted to check it.",
+    "workaround": "Every row in the review table is editable on click — adjust the quantity manually before pushing the basket to Tesco or ASDA.",
+    "confidence": "medium",
+    "citations": [
+      "known-issues.md",
+      "ocr-and-items.md",
+      "troubleshooting.md"
+    ]
+  },
+  "ticket": {
+    "title": "OCR: handwritten quantity digits silently default to 1 on digit-letter misreads",
+    "body": "**Problem**\nUsers report that handwritten quantities like \"6 eggs\" land in the review table as quantity 1 with no indication that the digit was misread.\n\n**Probable root cause**\n`src/ocr/parseQuantity.ts` discards any token containing a non-numeric character. When the OCR pass misreads `6` as `b`, the token is rejected and the fallback default of 1 is used, without downgrading the row's confidence badge.\n\n**Suggested fix**\n1. In `parseQuantity.ts`, detect common digit-letter confusions (`b↔6`, `l↔1`, `O↔0`, `S↔5`) and retry the parse against the digit-interpretation.\n2. When the parser falls back to the default, emit a `quantityFallback: true` flag on the row so `confidence.ts` can downgrade it to Low.\n3. In `ReviewTable.svelte`, render a small warning badge on rows with `quantityFallback`.\n\n**Affected files**\n- src/ocr/parseQuantity.ts\n- src/ocr/confidence.ts\n- src/ui/ReviewTable.svelte\n\n**Severity**: medium — user-facing but with an obvious workaround (edit inline)."
+  }
+}

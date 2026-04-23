@@ -42,7 +42,8 @@ export interface PipelineOverrides {
     c: CodeInvestigationResult | null,
   ) => Promise<ResolutionResult>;
   ticketing?: (r: ResolutionResult) => Promise<TicketSummary>;
-  openFixPR?: (r: ResolutionResult) => Promise<PRSummary>;
+  /** Returns null when the scenario has no PR (treated as skipped by the orchestrator). */
+  openFixPR?: (r: ResolutionResult) => Promise<PRSummary | null>;
 }
 
 export interface PipelineContext {
@@ -141,12 +142,24 @@ export async function runPipeline(
   if (ctx.flags.prFlow && resolution.confidence === "high") {
     if (ctx.overrides?.openFixPR) {
       try {
-        pr = await timed("openFixPR", async () => {
-          // biome-ignore lint/style/noNonNullAssertion: guarded above
-          return ctx.overrides!.openFixPR!(resolution);
-        });
-      } catch {
+        const maybePR = await ctx.overrides.openFixPR(resolution);
+        if (maybePR) {
+          pr = maybePR;
+          emit({ phase: "openFixPR", status: "completed" });
+        } else {
+          emit({
+            phase: "openFixPR",
+            status: "skipped",
+            summary: "no PR available for this scenario",
+          });
+        }
+      } catch (err) {
         // PR failure is non-fatal; pipeline still responds
+        emit({
+          phase: "openFixPR",
+          status: "failed",
+          summary: err instanceof Error ? err.message : String(err),
+        });
       }
     } else {
       emit({
