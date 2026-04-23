@@ -1,7 +1,11 @@
 import { Router, type Router as RouterType } from "express";
 import type { AppConfig } from "../config.js";
+import type { Retriever } from "../rag/indexer.js";
 
-export function buildHealthRouter(config: AppConfig): RouterType {
+export function buildHealthRouter(
+  config: AppConfig,
+  retriever?: Retriever,
+): RouterType {
   const router: RouterType = Router();
   router.get("/health", (_req, res) => {
     res.json({
@@ -10,7 +14,7 @@ export function buildHealthRouter(config: AppConfig): RouterType {
       shortcut: config.shortcut.mode,
       github: config.github.mode,
       demoMode: config.demoMode,
-      ragIndexed: 0,
+      ragIndexed: retriever?.size() ?? 0,
     });
   });
   return router;
