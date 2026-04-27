@@ -5,6 +5,8 @@ import { createApp } from "./app.js";
 import type { ClaudeClient } from "./clients/claude.js";
 import { createLiveClaudeClient } from "./clients/claude.js";
 import { createMockClaudeClient } from "./clients/claude.mock.js";
+import { type GithubClient, createLiveGithubClient } from "./clients/github.js";
+import { createMockGithubClient } from "./clients/github.mock.js";
 import {
   type ShortcutClient,
   createLiveShortcutClient,
@@ -118,6 +120,18 @@ if (claudeMode === "live" && productRepo.path) {
   logger.warn("claude: mock client active with no fixtures");
 }
 
+// Pick the GitHub client. Live mode requires both ENABLE_PR_FLOW=true and
+// either GH_TOKEN/GITHUB_TOKEN (gh CLI authentication). The mock client
+// returns a deterministic fake URL.
+let github: GithubClient;
+if (config.github.mode === "live") {
+  github = createLiveGithubClient({ token: config.github.token, logger });
+  logger.info({ repo: config.github.repo }, "github: live client active");
+} else {
+  github = createMockGithubClient();
+  logger.info("github: mock client active");
+}
+
 // Pick the Shortcut client. Live mode requires both SHORTCUT_API_TOKEN
 // (already in config) and — for most workspaces — a workflow_state_id. In
 // every other case we use the deterministic mock.
@@ -143,7 +157,9 @@ const app = createApp({
   retriever,
   claude,
   shortcut,
+  github,
   fixtures,
+  productRepoPath: productRepo.path,
 });
 
 app.listen(config.port, () => {

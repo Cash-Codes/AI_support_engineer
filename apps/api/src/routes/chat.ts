@@ -3,12 +3,14 @@ import type { ChatMessage, ChatResponse, PhaseEvent } from "@ai-support/shared";
 import { Router, type Router as RouterType } from "express";
 import { z } from "zod";
 import type { ClaudeClient } from "../clients/claude.js";
+import type { GithubClient } from "../clients/github.js";
 import type { ShortcutClient } from "../clients/shortcut.js";
 import type { AppConfig } from "../config.js";
 import { type FixtureLibrary, buildMockPR } from "../fixtures/index.js";
 import type { Logger } from "../logger.js";
 import { composeTicket } from "../orchestrator/composeTicket.js";
 import { type PipelineOverrides, runPipeline } from "../orchestrator/index.js";
+import { runOpenFixPR } from "../orchestrator/openFixPR/index.js";
 import type { Retriever } from "../rag/indexer.js";
 import type { SessionStore } from "../sessions/store.js";
 
@@ -30,19 +32,34 @@ export interface ChatRouterDeps {
   retriever?: Retriever;
   claude?: ClaudeClient;
   shortcut?: ShortcutClient;
+  github?: GithubClient;
   fixtures?: FixtureLibrary;
+  /** Required for the live PR flow — absolute path to the product repo. */
+  productRepoPath?: string;
 }
 
 export function buildChatRouter(deps: ChatRouterDeps): RouterType {
-  const { config, logger, sessions, retriever, claude, shortcut, fixtures } =
-    deps;
+  const {
+    config,
+    logger,
+    sessions,
+    retriever,
+    claude,
+    shortcut,
+    github,
+    fixtures,
+    productRepoPath,
+  } = deps;
   const router: RouterType = Router();
 
   const overrides = buildPipelineOverrides({
     retriever,
     claude,
     shortcut,
+    github,
     fixtures,
+    productRepoPath,
+    logger,
   });
 
   router.post("/chat", async (req, res) => {
@@ -162,14 +179,25 @@ interface OverridesDeps {
   retriever?: Retriever;
   claude?: ClaudeClient;
   shortcut?: ShortcutClient;
+  github?: GithubClient;
   fixtures?: FixtureLibrary;
+  productRepoPath?: string;
+  logger: Logger;
 }
 
 function buildPipelineOverrides(
   deps: OverridesDeps,
 ): PipelineOverrides | undefined {
-  const { retriever, claude, shortcut, fixtures } = deps;
-  const hasAny = retriever || claude || shortcut || fixtures;
+  const {
+    retriever,
+    claude,
+    shortcut,
+    github,
+    fixtures,
+    productRepoPath,
+    logger,
+  } = deps;
+  const hasAny = retriever || claude || shortcut || github || fixtures;
   if (!hasAny) return undefined;
 
   const overrides: PipelineOverrides = {};
@@ -205,7 +233,25 @@ function buildPipelineOverrides(
     };
   }
 
-  if (fixtures) {
+  // openFixPR routing:
+  //   live path  — both Claude and GitHub clients are live AND the
+  //                product repo path is set: spawn the real fix agent.
+  //   fixture path — fall back to the fixture's preformed PR data so
+  //                  demos keep working without git/gh tooling.
+  const liveFixPath =
+    claude?.mode === "live" &&
+    github?.mode === "live" &&
+    typeof productRepoPath === "string";
+
+  if (liveFixPath && github && productRepoPath) {
+    overrides.openFixPR = async (resolution, investigation, intake) => {
+      if (!investigation) return null;
+      return runOpenFixPR(
+        { intake, resolution, investigation },
+        { productRepoPath, github, logger },
+      );
+    };
+  } else if (fixtures) {
     overrides.openFixPR = async (resolution) => {
       const fix = findFixtureByResolution(fixtures, resolution);
       return fix ? (buildMockPR(fix) ?? null) : null;

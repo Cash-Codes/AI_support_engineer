@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { type Express, Router } from "express";
 import type { ClaudeClient } from "./clients/claude.js";
+import type { GithubClient } from "./clients/github.js";
 import type { ShortcutClient } from "./clients/shortcut.js";
 import type { AppConfig } from "./config.js";
 import type { FixtureLibrary } from "./fixtures/index.js";
@@ -27,8 +28,12 @@ export interface CreateAppDeps {
   claude?: ClaudeClient;
   /** Injectable Shortcut client (live or mock). When absent, pipeline stub is used. */
   shortcut?: ShortcutClient;
+  /** Injectable GitHub client (live or mock). Required only for live PR flow. */
+  github?: GithubClient;
   /** Fixture library — powers the mock client's ticket/PR metadata lookup. */
   fixtures?: FixtureLibrary;
+  /** Absolute path to the product repo — required for the live fix-PR flow. */
+  productRepoPath?: string;
   /** Skips static /widget/* and /demo/* mounting — useful in tests. */
   skipWidgetStatic?: boolean;
 }
@@ -40,7 +45,9 @@ export function createApp({
   retriever,
   claude,
   shortcut,
+  github,
   fixtures,
+  productRepoPath,
   skipWidgetStatic = false,
 }: CreateAppDeps): Express {
   const app = express();
@@ -73,7 +80,9 @@ export function createApp({
       retriever,
       claude,
       shortcut,
+      github,
       fixtures,
+      productRepoPath,
     }),
   );
   if (!skipWidgetStatic) {
@@ -94,7 +103,7 @@ export function createApp({
       port: config.port,
       claude: claude?.mode ?? config.claude.mode,
       shortcut: shortcut?.mode ?? config.shortcut.mode,
-      github: config.github.mode,
+      github: github?.mode ?? config.github.mode,
       demoMode: config.demoMode,
       widgetOriginsConfigured: config.cors.widgetOrigins.length,
       fixtures: fixtures?.all().length ?? 0,
