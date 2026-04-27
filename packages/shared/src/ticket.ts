@@ -22,3 +22,14 @@ export interface TicketDraft {
   storyType: StoryType;
   labels: string[];
 }
+
+/**
+ * Platform-agnostic PR draft. The openFixPR phase composes one of these
+ * after running the fix; a GithubClient (live or mock) opens the PR.
+ */
+export interface PRDraft {
+  title: string;
+  body: string;
+  branch: string;
+  baseBranch: string;
+}

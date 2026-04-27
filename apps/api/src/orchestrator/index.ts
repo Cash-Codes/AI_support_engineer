@@ -47,7 +47,11 @@ export interface PipelineOverrides {
     i: IntakeResult,
   ) => Promise<TicketSummary>;
   /** Returns null when the scenario has no PR (treated as skipped by the orchestrator). */
-  openFixPR?: (r: ResolutionResult) => Promise<PRSummary | null>;
+  openFixPR?: (
+    r: ResolutionResult,
+    c: CodeInvestigationResult | null,
+    i: IntakeResult,
+  ) => Promise<PRSummary | null>;
 }
 
 export interface PipelineContext {
@@ -146,7 +150,11 @@ export async function runPipeline(
   if (ctx.flags.prFlow && resolution.confidence === "high") {
     if (ctx.overrides?.openFixPR) {
       try {
-        const maybePR = await ctx.overrides.openFixPR(resolution);
+        const maybePR = await ctx.overrides.openFixPR(
+          resolution,
+          investigation,
+          intake,
+        );
         if (maybePR) {
           pr = maybePR;
           emit({ phase: "openFixPR", status: "completed" });
