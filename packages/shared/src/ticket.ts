@@ -9,3 +9,16 @@ export interface PRSummary {
   branch: string;
   provider: "github" | "mock";
 }
+
+export type StoryType = "bug" | "chore" | "feature";
+
+/**
+ * Platform-agnostic ticket draft. The ticketing phase composes one of
+ * these; a ShortcutClient (live or mock) creates the actual story.
+ */
+export interface TicketDraft {
+  title: string;
+  body: string;
+  storyType: StoryType;
+  labels: string[];
+}

@@ -5,6 +5,11 @@ import { createApp } from "./app.js";
 import type { ClaudeClient } from "./clients/claude.js";
 import { createLiveClaudeClient } from "./clients/claude.js";
 import { createMockClaudeClient } from "./clients/claude.mock.js";
+import {
+  type ShortcutClient,
+  createLiveShortcutClient,
+} from "./clients/shortcut.js";
+import { createMockShortcutClient } from "./clients/shortcut.mock.js";
 import { parseConfig } from "./config.js";
 import { type FixtureLibrary, loadFixtures } from "./fixtures/index.js";
 import { createLogger } from "./logger.js";
@@ -113,7 +118,33 @@ if (claudeMode === "live" && productRepo.path) {
   logger.warn("claude: mock client active with no fixtures");
 }
 
-const app = createApp({ config, logger, retriever, claude, fixtures });
+// Pick the Shortcut client. Live mode requires both SHORTCUT_API_TOKEN
+// (already in config) and — for most workspaces — a workflow_state_id. In
+// every other case we use the deterministic mock.
+let shortcut: ShortcutClient;
+if (config.shortcut.mode === "live") {
+  shortcut = createLiveShortcutClient({
+    apiToken: config.shortcut.token,
+    workflowStateId: config.shortcut.workflowStateId,
+    logger,
+  });
+  logger.info(
+    { workflowStateId: config.shortcut.workflowStateId ?? "(none)" },
+    "shortcut: live client active",
+  );
+} else {
+  shortcut = createMockShortcutClient();
+  logger.info("shortcut: mock client active");
+}
+
+const app = createApp({
+  config,
+  logger,
+  retriever,
+  claude,
+  shortcut,
+  fixtures,
+});
 
 app.listen(config.port, () => {
   logger.info({ port: config.port }, "api listening");

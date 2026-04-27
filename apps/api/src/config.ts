@@ -35,6 +35,13 @@ const EnvSchema = z.object({
   DASHBOARD_ORIGIN: z.string().optional(),
   SHORTCUT_API_TOKEN: z.string().optional(),
   SHORTCUT_WORKSPACE: z.string().optional(),
+  SHORTCUT_WORKFLOW_STATE_ID: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : Number(v)))
+    .refine((n) => n === undefined || Number.isFinite(n), {
+      message: "SHORTCUT_WORKFLOW_STATE_ID must be numeric",
+    }),
   GITHUB_TOKEN: z.string().optional(),
   GITHUB_REPO: z.string().optional(),
 });
@@ -52,7 +59,12 @@ export interface AppConfig {
   claude: { mode: "live" | "mock" };
   shortcut:
     | { mode: "mock" }
-    | { mode: "live"; token: string; workspace?: string };
+    | {
+        mode: "live";
+        token: string;
+        workspace?: string;
+        workflowStateId?: number;
+      };
   github: { mode: "mock" } | { mode: "live"; token: string; repo: string };
 }
 
@@ -68,6 +80,7 @@ export function parseConfig(raw: NodeJS.ProcessEnv): AppConfig {
         mode: "live",
         token: env.SHORTCUT_API_TOKEN,
         workspace: env.SHORTCUT_WORKSPACE,
+        workflowStateId: env.SHORTCUT_WORKFLOW_STATE_ID,
       }
     : { mode: "mock" };
 
