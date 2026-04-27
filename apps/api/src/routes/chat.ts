@@ -3,13 +3,11 @@ import type { ChatMessage, ChatResponse, PhaseEvent } from "@ai-support/shared";
 import { Router, type Router as RouterType } from "express";
 import { z } from "zod";
 import type { ClaudeClient } from "../clients/claude.js";
+import type { ShortcutClient } from "../clients/shortcut.js";
 import type { AppConfig } from "../config.js";
-import {
-  type FixtureLibrary,
-  buildMockPR,
-  buildMockTicket,
-} from "../fixtures/index.js";
+import { type FixtureLibrary, buildMockPR } from "../fixtures/index.js";
 import type { Logger } from "../logger.js";
+import { composeTicket } from "../orchestrator/composeTicket.js";
 import { type PipelineOverrides, runPipeline } from "../orchestrator/index.js";
 import type { Retriever } from "../rag/indexer.js";
 import type { SessionStore } from "../sessions/store.js";
@@ -31,16 +29,19 @@ export interface ChatRouterDeps {
   sessions: SessionStore;
   retriever?: Retriever;
   claude?: ClaudeClient;
+  shortcut?: ShortcutClient;
   fixtures?: FixtureLibrary;
 }
 
 export function buildChatRouter(deps: ChatRouterDeps): RouterType {
-  const { config, logger, sessions, retriever, claude, fixtures } = deps;
+  const { config, logger, sessions, retriever, claude, shortcut, fixtures } =
+    deps;
   const router: RouterType = Router();
 
   const overrides = buildPipelineOverrides({
     retriever,
     claude,
+    shortcut,
     fixtures,
   });
 
@@ -160,14 +161,15 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
 interface OverridesDeps {
   retriever?: Retriever;
   claude?: ClaudeClient;
+  shortcut?: ShortcutClient;
   fixtures?: FixtureLibrary;
 }
 
 function buildPipelineOverrides(
   deps: OverridesDeps,
 ): PipelineOverrides | undefined {
-  const { retriever, claude, fixtures } = deps;
-  const hasAny = retriever || claude || fixtures;
+  const { retriever, claude, shortcut, fixtures } = deps;
+  const hasAny = retriever || claude || shortcut || fixtures;
   if (!hasAny) return undefined;
 
   const overrides: PipelineOverrides = {};
@@ -186,12 +188,24 @@ function buildPipelineOverrides(
       claude.synthesize(intake, retrieved, decision, investigation);
   }
 
-  if (fixtures) {
-    // Ticket + PR metadata come from whichever fixture matched the intake.
-    overrides.ticketing = async (resolution) => {
-      const fix = findFixtureByResolution(fixtures, resolution);
-      return buildMockTicket(fix ?? fixtures.fallback());
+  if (shortcut) {
+    overrides.ticketing = async (resolution, investigation, intake) => {
+      // If a fixture matches this scenario and provides a preformed
+      // title/body, use it — demo-quality wording takes precedence.
+      const fix = fixtures
+        ? findFixtureByResolution(fixtures, resolution)
+        : undefined;
+      const draft = composeTicket({
+        intake,
+        resolution,
+        investigation,
+        preformed: fix?.ticket,
+      });
+      return shortcut.createStory(draft);
     };
+  }
+
+  if (fixtures) {
     overrides.openFixPR = async (resolution) => {
       const fix = findFixtureByResolution(fixtures, resolution);
       return fix ? (buildMockPR(fix) ?? null) : null;

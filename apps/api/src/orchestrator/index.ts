@@ -41,7 +41,11 @@ export interface PipelineOverrides {
     r: RouterDecision,
     c: CodeInvestigationResult | null,
   ) => Promise<ResolutionResult>;
-  ticketing?: (r: ResolutionResult) => Promise<TicketSummary>;
+  ticketing?: (
+    r: ResolutionResult,
+    c: CodeInvestigationResult | null,
+    i: IntakeResult,
+  ) => Promise<TicketSummary>;
   /** Returns null when the scenario has no PR (treated as skipped by the orchestrator). */
   openFixPR?: (r: ResolutionResult) => Promise<PRSummary | null>;
 }
@@ -132,7 +136,7 @@ export async function runPipeline(
   try {
     ticket = await timed("ticketing", async () => {
       const fn = ctx.overrides?.ticketing ?? runTicketing;
-      return fn(resolution);
+      return fn(resolution, investigation, intake);
     });
   } catch {
     // ticketing already emitted a failed event via `timed()`

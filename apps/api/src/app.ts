@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { type Express, Router } from "express";
 import type { ClaudeClient } from "./clients/claude.js";
+import type { ShortcutClient } from "./clients/shortcut.js";
 import type { AppConfig } from "./config.js";
 import type { FixtureLibrary } from "./fixtures/index.js";
 import type { Logger } from "./logger.js";
@@ -24,6 +25,8 @@ export interface CreateAppDeps {
   retriever?: Retriever;
   /** Injectable Claude client (live or mock). When absent, pipeline stubs are used. */
   claude?: ClaudeClient;
+  /** Injectable Shortcut client (live or mock). When absent, pipeline stub is used. */
+  shortcut?: ShortcutClient;
   /** Fixture library — powers the mock client's ticket/PR metadata lookup. */
   fixtures?: FixtureLibrary;
   /** Skips static /widget/* and /demo/* mounting — useful in tests. */
@@ -36,6 +39,7 @@ export function createApp({
   sessions = new SessionStore(),
   retriever,
   claude,
+  shortcut,
   fixtures,
   skipWidgetStatic = false,
 }: CreateAppDeps): Express {
@@ -62,7 +66,15 @@ export function createApp({
   widgetRouter.use(widgetCors);
   widgetRouter.use(buildSessionInitRouter(sessions));
   widgetRouter.use(
-    buildChatRouter({ config, logger, sessions, retriever, claude, fixtures }),
+    buildChatRouter({
+      config,
+      logger,
+      sessions,
+      retriever,
+      claude,
+      shortcut,
+      fixtures,
+    }),
   );
   if (!skipWidgetStatic) {
     widgetRouter.use(buildWidgetRouter());
@@ -81,7 +93,7 @@ export function createApp({
     {
       port: config.port,
       claude: claude?.mode ?? config.claude.mode,
-      shortcut: config.shortcut.mode,
+      shortcut: shortcut?.mode ?? config.shortcut.mode,
       github: config.github.mode,
       demoMode: config.demoMode,
       widgetOriginsConfigured: config.cors.widgetOrigins.length,
