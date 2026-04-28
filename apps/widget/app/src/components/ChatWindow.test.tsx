@@ -57,8 +57,15 @@ describe("ChatWindow", () => {
 
     expect(await screen.findByText("refund missing")).toBeInTheDocument();
     expect(await screen.findByText("Here is the answer.")).toBeInTheDocument();
+    expect(await screen.findByText(/Ticket MOCK-1/)).toBeInTheDocument();
+
+    // Confidence pill is visible immediately
+    expect(await screen.findByText(/high confidence/i)).toBeInTheDocument();
+
+    // Phase trace is collapsed behind a toggle; expand it
+    const toggle = await screen.findByRole("button", { name: /view trace/i });
+    await user.click(toggle);
     expect(await screen.findByText("intake")).toBeInTheDocument();
     expect(await screen.findByText("docsRetrieval")).toBeInTheDocument();
-    expect(await screen.findByText(/Ticket MOCK-1/)).toBeInTheDocument();
   });
 });
