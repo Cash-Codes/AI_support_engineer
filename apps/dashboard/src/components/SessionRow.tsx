@@ -24,7 +24,7 @@ const CONFIDENCE_STYLE: Record<string, string> = {
 };
 
 export function SessionRow({ session }: Props) {
-  const confidence = session.latestConfidence ?? "—";
+  const confidence = session.latestConfidence ?? "-";
   const confidenceCls =
     session.latestConfidence && CONFIDENCE_STYLE[session.latestConfidence]
       ? CONFIDENCE_STYLE[session.latestConfidence]

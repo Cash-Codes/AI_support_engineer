@@ -25,8 +25,9 @@ describe("App (widget)", () => {
     expect(
       screen.getByRole("button", { name: /close chat/i }),
     ).toBeInTheDocument();
+    // After session init completes, empty-state suggestions appear.
     await waitFor(() =>
-      expect(screen.getByText(/Describe your issue/i)).toBeInTheDocument(),
+      expect(screen.getByText(/describe a bug/i)).toBeInTheDocument(),
     );
   });
 });

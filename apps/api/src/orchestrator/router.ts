@@ -3,7 +3,7 @@ import type { DocsRetrievalResult } from "./docsRetrieval.js";
 import type { IntakeResult } from "./intake.js";
 
 /**
- * Phase stub — real LLM routing lands in Phase 6.
+ * Phase stub - real LLM routing lands in Phase 6.
  * Default behavior: always escalate to code investigation so the full pipeline
  * exercises every downstream phase during v1 development.
  */

@@ -46,9 +46,8 @@ export interface ClaudeClient {
 
 export interface CreateLiveClaudeClientOptions {
   productRepoPath: string;
-  credentialsPath: string;
   logger?: Logger;
-  /** Override timeouts per phase (ms) — useful for tests / tight demos. */
+  /** Override timeouts per phase (ms) - useful for tests / tight demos. */
   timeouts?: {
     router?: number;
     investigate?: number;
@@ -58,12 +57,13 @@ export interface CreateLiveClaudeClientOptions {
 
 /**
  * Live Claude Code CLI client. Each phase spawns `claude --print` as a
- * subprocess, pipes a phase-specific prompt to stdin, and parses the final
+ * subprocess, pipes a phase-specific prompt to stdin and parses the final
  * ```json block from stdout.
  *
- * Authentication is handled by the CLI itself via the OAuth credentials
- * file at `/root/.claude/.credentials.json`. We do not inject an
- * ANTHROPIC_API_KEY and is what Cloud Run will use in production.
+ * Authentication is handled by the CLI itself - it discovers OAuth
+ * credentials at the standard locations (`~/.claude/.credentials.json`
+ * locally, `/root/.claude/.credentials.json` when mounted into the Cloud
+ * Run container). We do not inject an ANTHROPIC_API_KEY.
  */
 export function createLiveClaudeClient(
   opts: CreateLiveClaudeClientOptions,
@@ -80,7 +80,7 @@ export function createLiveClaudeClient(
       const { stdout } = await spawnClaude({
         prompt: buildRouterPrompt(intake, retrieved),
         cwd: productRepoPath,
-        allowedTools: [], // pure reasoning — no tool use
+        allowedTools: [], // pure reasoning - no tool use
         maxTurns: 4,
         timeoutMs: tRouter,
         logger,
@@ -127,7 +127,7 @@ export function createLiveClaudeClient(
           investigation,
         ),
         cwd: productRepoPath,
-        allowedTools: [], // synthesis only — no tool use
+        allowedTools: [], // synthesis only - no tool use
         maxTurns: 4,
         timeoutMs: tSynthesize,
         logger,

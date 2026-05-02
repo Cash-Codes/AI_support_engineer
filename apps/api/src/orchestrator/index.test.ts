@@ -82,7 +82,7 @@ describe("runPipeline", () => {
     expect(res.assistantMessage.content.length).toBeGreaterThan(0);
   });
 
-  it("opens a PR when prFlow is on, confidence is high, and override is provided", async () => {
+  it("opens a PR when prFlow is on, confidence is high and override is provided", async () => {
     const events: PhaseEvent[] = [];
     const res = await runPipeline(
       { message: "refund bug" },

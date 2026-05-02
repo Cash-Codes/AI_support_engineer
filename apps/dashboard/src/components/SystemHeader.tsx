@@ -1,8 +1,25 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { type SystemHealth, fetchHealth } from "../lib/api.js";
 
 export function SystemHeader() {
   const location = useLocation();
   const isDetail = location.pathname.startsWith("/sessions/");
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchHealth()
+      .then((h) => {
+        if (!cancelled) setHealth(h);
+      })
+      .catch(() => {
+        // Leave health null - badges fall back to "-"
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
@@ -43,9 +60,9 @@ export function SystemHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <ModeBadge label="Claude" value="mock" />
-          <ModeBadge label="Shortcut" value="mock" />
-          <ModeBadge label="GitHub" value="mock" />
+          <ModeBadge label="Claude" value={health?.mode ?? "-"} />
+          <ModeBadge label="Shortcut" value={health?.shortcut ?? "-"} />
+          <ModeBadge label="GitHub" value={health?.github ?? "-"} />
           <span className="h-6 w-px bg-line" aria-hidden="true" />
           <div className="flex items-center gap-1.5 text-xs text-fg-2">
             <span
@@ -72,10 +89,16 @@ function Logomark() {
 }
 
 function ModeBadge({ label, value }: { label: string; value: string }) {
+  const valueClass =
+    value === "live"
+      ? "text-success"
+      : value === "mock"
+        ? "text-warning"
+        : "text-fg-3";
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1 text-xs">
       <span className="text-fg-2">{label}</span>
-      <span className="font-medium text-warning">{value}</span>
+      <span className={`font-medium ${valueClass}`}>{value}</span>
     </span>
   );
 }

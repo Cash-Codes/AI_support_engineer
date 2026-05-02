@@ -6,7 +6,7 @@ import type { Embedder } from "./embeddings.js";
 import { buildRetriever } from "./indexer.js";
 
 /**
- * Deterministic in-memory embedder for tests — hashes text into a tiny
+ * Deterministic in-memory embedder for tests - hashes text into a tiny
  * dense vector. Semantic quality is nonsense, but it's stable enough to
  * verify the indexer wiring + cache behavior.
  */
@@ -90,7 +90,7 @@ describe("buildRetriever", () => {
     expect(embedder2.calls).toBe(0); // cache hit → no build-time embeds
     expect(retriever2.size()).toBe(3); // same 3 chunks recovered from cache
 
-    // query path should still work — this exercises embed()
+    // query path should still work - this exercises embed()
     const docs = await retriever2.search("refund", 1);
     expect(docs).toHaveLength(1);
     expect(embedder2.calls).toBe(1);

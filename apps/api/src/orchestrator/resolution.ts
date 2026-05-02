@@ -11,7 +11,7 @@ export interface ResolutionResult {
 }
 
 /**
- * Phase stub — composes a final reply from the prior phases' output.
+ * Phase stub - composes a final reply from the prior phases' output.
  * The real LLM synthesis lands in Phase 6.
  */
 export async function runResolution(

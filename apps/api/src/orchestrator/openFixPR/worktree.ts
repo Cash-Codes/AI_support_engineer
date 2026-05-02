@@ -17,7 +17,7 @@ export interface CreateWorktreeOptions {
   repoPath: string;
   /** Slug used to name the branch (e.g. "basket-push-fix"). */
   slug: string;
-  /** Base branch to fork from — defaults to "main". */
+  /** Base branch to fork from - defaults to "main". */
   baseBranch?: string;
   /** Override the parent dir for the worktree (defaults to OS temp). */
   parentDir?: string;
@@ -29,7 +29,7 @@ export interface CreateWorktreeOptions {
  * a handle the caller MUST clean up with `removeWorktree`.
  *
  * Worktrees give us an isolated working directory whose changes don't
- * affect the user's checkout — exactly what we need for an autonomous
+ * affect the user's checkout - exactly what we need for an autonomous
  * agent to make edits without stepping on the dev's working tree.
  */
 export async function createWorktree(
@@ -60,7 +60,7 @@ export async function createWorktree(
 }
 
 /**
- * Removes a worktree and its branch (locally). Idempotent — safe to call
+ * Removes a worktree and its branch (locally). Idempotent - safe to call
  * even when partial cleanup is needed.
  */
 export async function removeWorktree(

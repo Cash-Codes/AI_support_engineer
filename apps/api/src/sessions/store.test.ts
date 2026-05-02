@@ -4,7 +4,7 @@ import type {
   TicketSummary,
 } from "@ai-support/shared";
 import { describe, expect, it } from "vitest";
-import { SessionStore } from "./store.js";
+import { InMemorySessionStore } from "./store.js";
 
 const message = (id: string, content: string): ChatMessage => ({
   id,
@@ -25,9 +25,9 @@ const ticket = (id: string): TicketSummary => ({
   provider: "mock",
 });
 
-describe("SessionStore", () => {
+describe("InMemorySessionStore", () => {
   it("creates a session with the given product and no messages", () => {
-    const store = new SessionStore();
+    const store = new InMemorySessionStore();
     const s = store.create("acme-app");
     expect(s.product).toBe("acme-app");
     expect(s.messageCount).toBe(0);
@@ -35,8 +35,8 @@ describe("SessionStore", () => {
     expect(store.has(s.sessionId)).toBe(true);
   });
 
-  it("records messages, traces, tickets, and reflects them in detail + summary", () => {
-    const store = new SessionStore();
+  it("records messages, traces, tickets and reflects them in detail + summary", () => {
+    const store = new InMemorySessionStore();
     const s = store.create("acme-app");
     store.appendMessage(s.sessionId, message("m1", "hi"));
     store.appendTrace(s.sessionId, trace("high"));
@@ -52,7 +52,7 @@ describe("SessionStore", () => {
   });
 
   it("list() returns newest first", async () => {
-    const store = new SessionStore();
+    const store = new InMemorySessionStore();
     const a = store.create("a");
     await new Promise((r) => setTimeout(r, 5));
     const b = store.create("b");
@@ -62,7 +62,7 @@ describe("SessionStore", () => {
   });
 
   it("evicts oldest entries when the cap is exceeded", () => {
-    const store = new SessionStore(2);
+    const store = new InMemorySessionStore(2);
     const a = store.create("a");
     store.create("b");
     store.create("c");

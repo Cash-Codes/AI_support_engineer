@@ -38,7 +38,7 @@ ${renderDocs(retrieved)}
   fix, or when the issue looks like a code bug (silent data loss, unexpected
   state, wrong values).
 - Do not escalate when the docs clearly state the cause and a usable
-  workaround — return a draftAnswer that the resolution phase can refine.
+  workaround - return a draftAnswer that the resolution phase can refine.
 - Confidence is your self-assessed certainty about THIS routing decision.
 
 # Output contract
@@ -61,7 +61,7 @@ export function buildInvestigationPrompt(
 ): string {
   return `You are the code investigation stage of an AI support agent. The router
 decided the user's issue needs code-level analysis of the product repository.
-Use the Read, Grep, and Glob tools (read-only) to locate the probable root
+Use the Read, Grep and Glob tools (read-only) to locate the probable root
 cause. Prefer reading documentation / README-like files first to orient
 yourself, then drill into source.
 
@@ -75,9 +75,9 @@ ${renderDocs(retrieved)}
 - Be targeted. A handful of Grep + Read calls is usually enough.
 - Identify 1–5 affected files by repository-relative path.
 - Confidence reflects how certain you are about the root cause:
-  - "high"  — you have strong evidence from the code
-  - "medium" — a plausible cause but could not fully verify
-  - "low"   — a best guess; more investigation needed
+  - "high"  - you have strong evidence from the code
+  - "medium" - a plausible cause but could not fully verify
+  - "low"   - a best guess; more investigation needed
 - Provide a workaround the user can try right now, even if the root cause
   is not yet conclusive.
 
@@ -108,7 +108,7 @@ affected files:
 ${investigation.affectedFiles.map((f) => `  - ${f}`).join("\n") || "  (none)"}
 workaround: ${investigation.workaround}
 confidence: ${investigation.confidence}`
-    : "# Code investigation\n(skipped — router resolved from docs)";
+    : "# Code investigation\n(skipped - router resolved from docs)";
 
   return `You are the resolution stage of an AI support agent. Produce a concise,
 user-facing explanation and workaround. Your output will be rendered in a
@@ -129,7 +129,7 @@ ${investigationBlock}
 
 # Guidance
 - "explanation" should answer what is happening and why, in 2–4 sentences.
-- "workaround" should be actionable — something the user can do right now.
+- "workaround" should be actionable - something the user can do right now.
 - "confidence" should match the investigation's confidence if there was one,
   otherwise the router's confidence.
 - "citations" should be the filenames of docs you drew from (e.g.

@@ -10,11 +10,11 @@ export function buildFixPrompt(args: {
 }): string {
   const filesList = args.investigation.affectedFiles.length
     ? args.investigation.affectedFiles.map((f) => `  - ${f}`).join("\n")
-    : "  (none specified — locate them yourself)";
+    : "  (none specified - locate them yourself)";
 
   return `You are the implementation stage of an AI support agent. The
 investigation phase has already located the probable root cause; your
-job is to make the actual code change, commit it, and push the branch.
+job is to make the actual code change, commit it and push the branch.
 
 # User-reported issue
 ${args.intake.originalMessage}

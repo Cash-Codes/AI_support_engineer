@@ -75,7 +75,7 @@ describe("loadFixtures", () => {
       },
     });
     const lib = await loadFixtures(tmp);
-    // sorted by slug asc — "a-second" wins
+    // sorted by slug asc - "a-second" wins
     expect(lib.match("something overlap here")?.slug).toBe("a-second");
   });
 

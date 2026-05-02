@@ -1,0 +1,25 @@
+{
+  "slug": "ssl-tls-unreachable",
+  "keywords": [
+    "tls_unreachable",
+    "tls unreachable",
+    "ssl check fails",
+    "ssl says tls",
+    "ssl reports tls",
+    "ssl error tls",
+    "tls connection failed",
+    "tls connection to port 443"
+  ],
+  "router": {
+    "escalate": false,
+    "rationale": "The troubleshooting and SSL-check docs cover this scenario thoroughly - three named causes (HTTP-only site, blocked outbound 443, host returns no certificate). No code investigation is needed.",
+    "confidence": "high",
+    "draftAnswer": "`tls_unreachable` means the TLS handshake to port 443 didn't complete. There are three documented causes: (1) the URL is HTTP-only, so there's no TLS to handshake with - submit the `https://` form if the site supports it; (2) outbound 443 is blocked from the Cloud Run probe region; (3) the host accepts the TCP connection but returns no certificate. The first one is by far the most common."
+  },
+  "resolution": {
+    "explanation": "Pulse Check's SSL probe opens a TLS connection to the URL's host on port 443 and reads the leaf certificate. When that connection fails, the SSL check reports `tls_unreachable`. The three causes documented in `troubleshooting.md` cover virtually every reported case: HTTP-only sites (no TLS to terminate), egress-firewalled hosts (Cloud Run probe can't reach 443) and the rare case of a server that accepts TCP but returns no certificate.",
+    "workaround": "Confirm the URL is reachable on `https://` from outside your network - `openssl s_client -connect host:443 -servername host` is a fast sanity check. If you submitted `http://`, resubmit with `https://`. If the host is reachable from a browser but the Pulse Check still fails, your firewall is most likely blocking Google Cloud Run egress IPs.",
+    "confidence": "high",
+    "citations": ["troubleshooting.md", "checks/ssl.md"]
+  }
+}

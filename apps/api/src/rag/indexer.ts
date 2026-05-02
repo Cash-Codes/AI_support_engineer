@@ -29,7 +29,7 @@ export interface BuildRetrieverOptions {
 /**
  * Builds (or loads from cache) an in-memory retriever over the markdown
  * files in `docsDir`. The cache is invalidated by a fingerprint composed
- * of file names, sizes, and mtimes, plus the embedding model id + dim.
+ * of file names, sizes and mtimes, plus the embedding model id + dim.
  */
 export async function buildRetriever(
   opts: BuildRetrieverOptions,
@@ -38,7 +38,7 @@ export async function buildRetriever(
 
   const fileEntries = await listDocs(docsDir);
   if (fileEntries.length === 0) {
-    logger?.warn({ docsDir }, "rag: no markdown docs found — empty index");
+    logger?.warn({ docsDir }, "rag: no markdown docs found - empty index");
     return emptyRetriever();
   }
 

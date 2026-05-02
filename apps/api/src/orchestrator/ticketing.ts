@@ -5,7 +5,7 @@ import type { IntakeResult } from "./intake.js";
 import type { ResolutionResult } from "./resolution.js";
 
 /**
- * Default (fallback) ticketing implementation — returns a mock ticket.
+ * Default (fallback) ticketing implementation - returns a mock ticket.
  * The real flow passes a `ticketing` override built around a ShortcutClient
  * plus composeTicket(); this stub only runs when no override is wired.
  */

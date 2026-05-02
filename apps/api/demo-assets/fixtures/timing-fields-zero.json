@@ -1,0 +1,27 @@
+{
+  "slug": "timing-fields-zero",
+  "keywords": [
+    "dnsms",
+    "tcpms",
+    "tlsms",
+    "timing breakdown",
+    "timing show 0",
+    "timing fields show",
+    "per-phase timing",
+    "phase timing",
+    "timing all zero",
+    "ttfbms"
+  ],
+  "router": {
+    "escalate": false,
+    "rationale": "This is a documented limitation, not a bug. The timing-breakdown doc and known-issues both state explicitly that per-phase timing is not yet implemented in this build. No code investigation is warranted.",
+    "confidence": "high",
+    "draftAnswer": "`dnsMs`, `tcpMs` and `tlsMs` always report `0` in the current build - that's a documented limitation, not a bug in your check. Only `ttfbMs` (time to first byte) and `totalMs` (wall-clock for the full fetch) carry real values right now. Socket-level instrumentation to populate the per-phase fields is on the roadmap as a future enhancement."
+  },
+  "resolution": {
+    "explanation": "Pulse Check's timing breakdown is intentionally partial in v1. The fetch path uses high-level HTTP semantics rather than raw socket lifecycle hooks, so the per-phase split (DNS → TCP → TLS → request → response) isn't observable in the current implementation. Both `docs/checks/timing-breakdown.md` and `docs/known-issues.md` call this out explicitly: `dnsMs`, `tcpMs` and `tlsMs` are reported as `0` and `ttfbMs` / `totalMs` are the only fields you can rely on.",
+    "workaround": "If you need per-phase timing for diagnostic work today, run the same URL through `curl -w '%{time_namelookup} %{time_connect} %{time_appconnect} %{time_starttransfer} %{time_total}\\n' -o /dev/null -s` from a comparable network location. Keep an eye on the changelog - socket-level instrumentation is the planned fix.",
+    "confidence": "high",
+    "citations": ["checks/timing-breakdown.md", "known-issues.md"]
+  }
+}

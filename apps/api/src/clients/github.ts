@@ -4,7 +4,7 @@ import type { Logger } from "../logger.js";
 
 /**
  * GithubClient opens a pull request from a branch that has already been
- * pushed to the remote. This client does NOT push the branch — that step
+ * pushed to the remote. This client does NOT push the branch - that step
  * happens inside the worktree before the client is invoked.
  */
 export interface GithubClient {
@@ -22,7 +22,7 @@ export interface CreateLiveGithubClientOptions {
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /**
- * Live GitHub client. Uses the `gh` CLI to open the PR — `gh` handles
+ * Live GitHub client. Uses the `gh` CLI to open the PR - `gh` handles
  * auth via either GH_TOKEN env or a prior `gh auth login`. Same machine
  * model as the live Claude client: spawn → wait → parse.
  */

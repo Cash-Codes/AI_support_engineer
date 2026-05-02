@@ -8,8 +8,16 @@ export interface SpawnClaudeOptions {
   maxTurns: number;
   timeoutMs: number;
   logger?: Logger;
-  /** Short tag included in log lines — e.g. "router", "investigate". */
+  /** Short tag included in log lines - e.g. "router", "investigate". */
   tag: string;
+  /**
+   * `--permission-mode` to pass to the Claude CLI. In `--print` mode the
+   * default behavior denies any tool that needs interactive permission
+   * - fine for read-only phases (Read/Grep/Glob never prompt) but fatal
+   * for the fix-agent which has to run `git commit`. Pass "acceptEdits"
+   * for autonomous edit + commit phases.
+   */
+  permissionMode?: "acceptEdits" | "bypassPermissions" | "default" | "plan";
 }
 
 export interface SpawnClaudeResult {
@@ -22,17 +30,29 @@ export interface SpawnClaudeResult {
  * and returns the full stdout/stderr capture. Tools are restricted via
  * --allowedTools; an empty list means no tool use (pure reasoning).
  *
- * Throws on non-zero exit or timeout — callers should catch and surface as
+ * Throws on non-zero exit or timeout - callers should catch and surface as
  * a failed phase rather than crashing the request.
  */
 export async function spawnClaude(
   opts: SpawnClaudeOptions,
 ): Promise<SpawnClaudeResult> {
-  const { prompt, cwd, allowedTools, maxTurns, timeoutMs, logger, tag } = opts;
+  const {
+    prompt,
+    cwd,
+    allowedTools,
+    maxTurns,
+    timeoutMs,
+    logger,
+    tag,
+    permissionMode,
+  } = opts;
 
   const args = ["--print", "--max-turns", String(maxTurns)];
   if (allowedTools.length > 0) {
     args.push("--allowedTools", allowedTools.join(","));
+  }
+  if (permissionMode) {
+    args.push("--permission-mode", permissionMode);
   }
 
   logger?.info(
@@ -51,7 +71,7 @@ export async function spawnClaude(
       if (settled) return;
       settled = true;
       child.kill("SIGTERM");
-      logger?.warn({ tag, timeoutMs }, "claude-cli: timed out — killed");
+      logger?.warn({ tag, timeoutMs }, "claude-cli: timed out - killed");
       reject(
         new Error(`claude CLI timed out after ${timeoutMs}ms (tag=${tag})`),
       );

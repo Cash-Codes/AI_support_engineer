@@ -8,6 +8,23 @@ import type {
   TicketSummary,
 } from "@ai-support/shared";
 
+/**
+ * SessionStore is the persistence boundary for chat sessions. The api
+ * orchestrator calls these methods; the choice of in-memory vs SQLite
+ * (or anything else later) is made at server boot.
+ */
+export interface SessionStore {
+  create(product: string): SessionSummary;
+  has(sessionId: string): boolean;
+  appendMessage(sessionId: string, message: ChatMessage): void;
+  appendTrace(sessionId: string, trace: PipelineTrace): void;
+  appendTicket(sessionId: string, ticket: TicketSummary): void;
+  appendPR(sessionId: string, pr: PRSummary): void;
+  list(limit?: number): SessionSummary[];
+  getDetail(sessionId: string): SessionDetail | undefined;
+  size(): number;
+}
+
 interface SessionRecord {
   sessionId: string;
   product: string;
@@ -19,9 +36,10 @@ interface SessionRecord {
   prs: PRSummary[];
 }
 
-const DEFAULT_MAX_SESSIONS = 500;
+export const DEFAULT_MAX_SESSIONS = 500;
 
-export class SessionStore {
+/** In-memory `SessionStore` - fast, ephemeral, used for tests + dev w/o persistence. */
+export class InMemorySessionStore implements SessionStore {
   private readonly records = new Map<string, SessionRecord>();
   private readonly maxSessions: number;
 

@@ -57,7 +57,7 @@ body {
   font-feature-settings: "zero";
 }
 
-/* Subtle entrance for lists — no stagger dance, just a quiet fade */
+/* Subtle entrance for lists - no stagger dance, just a quiet fade */
 .fade-in {
   animation: fade-in 0.25s ease-out both;
 }
@@ -78,7 +78,7 @@ body {
   }
 }
 
-/* Scrollbar — subtle, enterprise */
+/* Scrollbar - subtle, enterprise */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

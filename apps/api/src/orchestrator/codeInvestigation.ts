@@ -10,7 +10,7 @@ export interface CodeInvestigationResult {
 }
 
 /**
- * Phase stub — real Claude Code CLI spawn lands in Phase 6.
+ * Phase stub - real Claude Code CLI spawn lands in Phase 6.
  */
 export async function runCodeInvestigation(
   _intake: IntakeResult,
@@ -19,7 +19,7 @@ export async function runCodeInvestigation(
   return {
     rootCause: "[stub] code investigation lands in Phase 6",
     affectedFiles: [],
-    workaround: "No workaround yet — stub response.",
+    workaround: "No workaround yet - stub response.",
     confidence: "low",
   };
 }

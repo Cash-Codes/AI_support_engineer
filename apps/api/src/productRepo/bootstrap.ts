@@ -5,7 +5,7 @@ import type { Logger } from "../logger.js";
 export interface ProductRepoResolution {
   /** Absolute path to the product repo root, or undefined if unavailable. */
   path: string | undefined;
-  /** Where the path came from — useful for observability. */
+  /** Where the path came from - useful for observability. */
   source: "config" | "none";
   /** True if the path exists on disk and looks like a repo (has a git dir OR package.json). */
   exists: boolean;
@@ -19,7 +19,7 @@ export interface ResolveProductRepoOptions {
 
 /**
  * Resolves the absolute path to the product repo. In v1 we only support a
- * local path — future iterations will clone from `configUrl` inside the
+ * local path - future iterations will clone from `configUrl` inside the
  * container entrypoint.
  *
  * Returns an undefined path when nothing is configured; callers should
@@ -32,7 +32,7 @@ export async function resolveProductRepo(
 
   if (!configPath) {
     logger?.warn(
-      "product repo: PRODUCT_REPO_PATH not set — code investigation will be unavailable",
+      "product repo: PRODUCT_REPO_PATH not set - code investigation will be unavailable",
     );
     return { path: undefined, source: "none", exists: false };
   }

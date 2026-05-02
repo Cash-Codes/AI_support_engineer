@@ -1,6 +1,12 @@
+export interface LoaderSuggestion {
+  label: string;
+  query: string;
+}
+
 export interface LoaderConfig {
   apiBase: string;
   product: string;
+  suggestions?: LoaderSuggestion[];
 }
 
 export function readConfigFromScript(
@@ -10,7 +16,28 @@ export function readConfigFromScript(
     script?.dataset.apiBase ??
     new URL(".", script?.src ?? location.href).origin;
   const product = script?.dataset.product ?? "unknown";
-  return { apiBase, product };
+  const suggestions = parseSuggestions(script?.dataset.suggestions);
+  return { apiBase, product, suggestions };
+}
+
+function parseSuggestions(
+  raw: string | undefined,
+): LoaderSuggestion[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return undefined;
+    const cleaned = parsed.filter(
+      (s): s is LoaderSuggestion =>
+        typeof s === "object" &&
+        s !== null &&
+        typeof (s as LoaderSuggestion).label === "string" &&
+        typeof (s as LoaderSuggestion).query === "string",
+    );
+    return cleaned.length > 0 ? cleaned : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function injectStyles(doc: Document): void {
@@ -143,6 +170,12 @@ export function mount(
   iframe.title = "AI Support Chat";
   const iframeUrl = new URL("/widget/", config.apiBase);
   iframeUrl.searchParams.set("product", config.product);
+  if (config.suggestions && config.suggestions.length > 0) {
+    iframeUrl.searchParams.set(
+      "suggestions",
+      JSON.stringify(config.suggestions),
+    );
+  }
   iframe.src = iframeUrl.toString();
   iframe.dataset.open = "false";
 
@@ -174,15 +207,15 @@ export function mount(
   return { button, iframe };
 }
 
-function autoMount() {
-  const script = document.currentScript as HTMLScriptElement | null;
-  mount(readConfigFromScript(script));
-}
-
 if (typeof document !== "undefined" && !("VITEST" in globalThis)) {
+  // `document.currentScript` is only valid synchronously while the
+  // script is executing - inside a DOMContentLoaded callback it returns
+  // null. Capture it here, in the IIFE and close over it.
+  const script = document.currentScript as HTMLScriptElement | null;
+  const run = () => mount(readConfigFromScript(script));
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", autoMount);
+    document.addEventListener("DOMContentLoaded", run);
   } else {
-    autoMount();
+    run();
   }
 }

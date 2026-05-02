@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { parseConfig } from "../config.js";
 import { createLogger } from "../logger.js";
-import { SessionStore } from "../sessions/store.js";
+import { InMemorySessionStore } from "../sessions/store.js";
 
 function buildTestApp(
   env: NodeJS.ProcessEnv = {},
-  sessions = new SessionStore(),
+  sessions = new InMemorySessionStore(),
 ) {
   const config = parseConfig(env);
   const logger = createLogger({ logLevel: "fatal" });

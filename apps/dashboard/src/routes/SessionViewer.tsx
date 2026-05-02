@@ -119,7 +119,7 @@ export function SessionViewer() {
                 detail.summary.hasPR ? "PR" : null,
               ]
                 .filter(Boolean)
-                .join(" · ") || "—"
+                .join(" · ") || "-"
             }
           />
         </dl>

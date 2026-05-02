@@ -1,16 +1,37 @@
+# Don't ship local artifacts into the build context.
 node_modules
 **/node_modules
 dist
 **/dist
-coverage
 data
+.env
+.env.*
+*.log
+
+# Source-control + editor noise
 .git
 .gitignore
-.env
-.env.local
-*.log
-.DS_Store
+.github
+.husky
 .vscode
 .idea
+.DS_Store
+
+# Tests / coverage
+coverage
+**/coverage
+**/*.test.ts
+**/*.test.tsx
+**/__tests__
+
+# Credentials, never bake into images
 claude-credentials.json
+*.credentials.json
+
+# Local docs that aren't needed inside the image (the demo-assets snapshot
+# lives under apps/api/demo-assets and is included implicitly).
 docs/superpowers
+README.md
+
+# pnpm artifacts that get re-derived inside the image
+.pnpm-store
