@@ -11,8 +11,8 @@ import type { ClaudeClient } from "./claude.js";
  * returns the corresponding field. Falls back to a generic response when
  * no fixture matches.
  *
- * This is deliberately deterministic — same input always produces the same
- * output — so demos and tests are reproducible.
+ * This is deliberately deterministic - same input always produces the same
+ * output - so demos and tests are reproducible.
  */
 export function createMockClaudeClient(fixtures: FixtureLibrary): ClaudeClient {
   const resolveFixture = (intake: IntakeResult): Fixture =>

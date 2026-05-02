@@ -39,13 +39,13 @@ export interface OpenFixPRInput {
  * Composes the full fix-and-PR flow:
  *   1. Create a fresh worktree on a new branch
  *   2. Spawn Claude with Read/Write/Edit/Bash(git *) inside that worktree
- *   3. Parse the agent's outcome — bail if it didn't make changes
+ *   3. Parse the agent's outcome - bail if it didn't make changes
  *   4. Open a PR via the GithubClient
  *   5. Always clean up the worktree (success or failure)
  *
  * Returns null when the agent reported no_changes (treated by the
  * orchestrator as a clean "skipped"). Throws on infrastructure failures
- * — orchestrator surfaces those as `openFixPR: failed`.
+ * - orchestrator surfaces those as `openFixPR: failed`.
  */
 export async function runOpenFixPR(
   input: OpenFixPRInput,
@@ -117,6 +117,11 @@ async function runFixAgent(args: RunFixAgentArgs): Promise<FixOutput> {
     }),
     cwd: args.worktree.path,
     allowedTools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash(git *)"],
+    // The CLI is in --print mode (no interactive UI). Without acceptEdits,
+    // permission prompts for `git commit` etc. auto-deny - leaving the fix
+    // staged but uncommitted. The worktree is a temp dir off main, so
+    // accepting edits + git commands is safely scoped.
+    permissionMode: "acceptEdits",
     maxTurns: 60,
     timeoutMs: args.timeoutMs,
     logger: args.logger,

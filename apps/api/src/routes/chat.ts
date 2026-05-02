@@ -34,8 +34,10 @@ export interface ChatRouterDeps {
   shortcut?: ShortcutClient;
   github?: GithubClient;
   fixtures?: FixtureLibrary;
-  /** Required for the live PR flow — absolute path to the product repo. */
+  /** Required for the live PR flow - absolute path to the product repo. */
   productRepoPath?: string;
+  /** Base branch the openFixPR worktree forks from. Defaults to "main". */
+  productRepoBaseBranch?: string;
 }
 
 export function buildChatRouter(deps: ChatRouterDeps): RouterType {
@@ -49,6 +51,7 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
     github,
     fixtures,
     productRepoPath,
+    productRepoBaseBranch,
   } = deps;
   const router: RouterType = Router();
 
@@ -59,6 +62,7 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
     github,
     fixtures,
     productRepoPath,
+    productRepoBaseBranch,
     logger,
   });
 
@@ -123,7 +127,7 @@ export function buildChatRouter(deps: ChatRouterDeps): RouterType {
     }
   });
 
-  // Plain-JSON alias — waits for pipeline to complete, returns ChatResponse.
+  // Plain-JSON alias - waits for pipeline to complete, returns ChatResponse.
   router.post("/api/support/query", async (req, res) => {
     const parsed = SupportQueryBody.safeParse(req.body);
     if (!parsed.success) {
@@ -182,6 +186,7 @@ interface OverridesDeps {
   github?: GithubClient;
   fixtures?: FixtureLibrary;
   productRepoPath?: string;
+  productRepoBaseBranch?: string;
   logger: Logger;
 }
 
@@ -195,6 +200,7 @@ function buildPipelineOverrides(
     github,
     fixtures,
     productRepoPath,
+    productRepoBaseBranch,
     logger,
   } = deps;
   const hasAny = retriever || claude || shortcut || github || fixtures;
@@ -219,7 +225,7 @@ function buildPipelineOverrides(
   if (shortcut) {
     overrides.ticketing = async (resolution, investigation, intake) => {
       // If a fixture matches this scenario and provides a preformed
-      // title/body, use it — demo-quality wording takes precedence.
+      // title/body, use it - demo-quality wording takes precedence.
       const fix = fixtures
         ? findFixtureByResolution(fixtures, resolution)
         : undefined;
@@ -234,9 +240,9 @@ function buildPipelineOverrides(
   }
 
   // openFixPR routing:
-  //   live path  — both Claude and GitHub clients are live AND the
+  //   live path  - both Claude and GitHub clients are live AND the
   //                product repo path is set: spawn the real fix agent.
-  //   fixture path — fall back to the fixture's preformed PR data so
+  //   fixture path - fall back to the fixture's preformed PR data so
   //                  demos keep working without git/gh tooling.
   const liveFixPath =
     claude?.mode === "live" &&
@@ -248,7 +254,12 @@ function buildPipelineOverrides(
       if (!investigation) return null;
       return runOpenFixPR(
         { intake, resolution, investigation },
-        { productRepoPath, github, logger },
+        {
+          productRepoPath,
+          baseBranch: productRepoBaseBranch,
+          github,
+          logger,
+        },
       );
     };
   } else if (fixtures) {
@@ -264,7 +275,7 @@ function buildPipelineOverrides(
 /**
  * Matches the resolution back to a fixture via its citations. Fixtures cite
  * doc filenames; we correlate by citation membership. Falls back to the
- * first fixture whose explanation prefix matches — best-effort, only used
+ * first fixture whose explanation prefix matches - best-effort, only used
  * for ticket/PR metadata.
  */
 function findFixtureByResolution(

@@ -6,7 +6,7 @@ export interface DocsRetrievalResult {
 }
 
 /**
- * Phase stub — real xenova-backed retrieval lands in Phase 5.
+ * Phase stub - real xenova-backed retrieval lands in Phase 5.
  * Returns a single placeholder chunk so downstream phases have something to work with.
  */
 export async function runDocsRetrieval(

@@ -19,17 +19,17 @@ export function buildWidgetRouter(
 ): RouterType {
   const router: RouterType = Router();
 
-  // Loader IIFE — embedded by the product app via <script>.
+  // Loader IIFE - embedded by the product app via <script>.
   router.use(
     "/widget/loader.js",
     express.static(path.join(widgetDistDir, "loader", "loader.js"), {
-      // Short cache — we still expect to iterate.
+      // Short cache - we still expect to iterate.
       maxAge: "5m",
       fallthrough: false,
     }),
   );
 
-  // Iframe SPA — everything else under /widget/.
+  // Iframe SPA - everything else under /widget/.
   router.use(
     "/widget",
     express.static(path.join(widgetDistDir, "app"), {

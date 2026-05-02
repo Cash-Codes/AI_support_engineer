@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 describe("SqliteSessionStore", () => {
-  it("creates a session, persists, and reflects it in the summary", () => {
+  it("creates a session, persists and reflects it in the summary", () => {
     const s = store.create("acme-app");
     expect(s.product).toBe("acme-app");
     expect(s.messageCount).toBe(0);
@@ -131,7 +131,7 @@ describe("SqliteSessionStore", () => {
         try {
           fs.unlinkSync(`${tmp}${suffix}`);
         } catch {
-          // ignore — file may not exist
+          // ignore - file may not exist
         }
       }
     }

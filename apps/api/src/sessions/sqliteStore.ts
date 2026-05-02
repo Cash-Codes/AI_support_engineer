@@ -49,7 +49,7 @@ interface RawPR {
  * SQLite-backed session store. Schema is created on first connection;
  * concurrent writes from the api process are safe (better-sqlite3 is
  * synchronous and the api is single-process). Multi-instance Cloud Run
- * is NOT supported by this store — that's a v2 problem.
+ * is NOT supported by this store - that's a v2 problem.
  */
 export class SqliteSessionStore implements SessionStore {
   private readonly db: DB;

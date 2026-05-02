@@ -56,7 +56,7 @@ describe("createWorktree + removeWorktree", () => {
     expect(branchListAfter).not.toContain(handle.branch);
   });
 
-  it("removeWorktree is idempotent — safe to call when partially gone", async () => {
+  it("removeWorktree is idempotent - safe to call when partially gone", async () => {
     const handle = await createWorktree({
       repoPath,
       slug: "twice",

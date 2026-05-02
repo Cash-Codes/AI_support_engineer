@@ -8,6 +8,7 @@ import type { FixtureLibrary } from "./fixtures/index.js";
 import type { Logger } from "./logger.js";
 import type { Retriever } from "./rag/indexer.js";
 import { buildChatRouter } from "./routes/chat.js";
+import { buildDashboardRouter } from "./routes/dashboard.js";
 import { buildDemoRouter } from "./routes/demo.js";
 import { buildHealthRouter } from "./routes/health.js";
 import {
@@ -15,7 +16,7 @@ import {
   buildSessionReadRouter,
 } from "./routes/session.js";
 import { buildWidgetRouter } from "./routes/widget.js";
-import { SessionStore } from "./sessions/store.js";
+import { InMemorySessionStore, type SessionStore } from "./sessions/store.js";
 
 export interface CreateAppDeps {
   config: AppConfig;
@@ -30,45 +31,63 @@ export interface CreateAppDeps {
   shortcut?: ShortcutClient;
   /** Injectable GitHub client (live or mock). Required only for live PR flow. */
   github?: GithubClient;
-  /** Fixture library — powers the mock client's ticket/PR metadata lookup. */
+  /** Fixture library - powers the mock client's ticket/PR metadata lookup. */
   fixtures?: FixtureLibrary;
-  /** Absolute path to the product repo — required for the live fix-PR flow. */
+  /** Absolute path to the product repo - required for the live fix-PR flow. */
   productRepoPath?: string;
-  /** Skips static /widget/* and /demo/* mounting — useful in tests. */
+  /** Base branch the openFixPR worktree forks from. Defaults to "main". */
+  productRepoBaseBranch?: string;
+  /** Skips static /widget/* and /demo/* mounting - useful in tests. */
   skipWidgetStatic?: boolean;
 }
 
 export function createApp({
   config,
   logger,
-  sessions = new SessionStore(),
+  sessions = new InMemorySessionStore(),
   retriever,
   claude,
   shortcut,
   github,
   fixtures,
   productRepoPath,
+  productRepoBaseBranch,
   skipWidgetStatic = false,
 }: CreateAppDeps): Express {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
 
-  const widgetCors = cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (config.cors.widgetOrigins.length === 0) return cb(null, true); // dev default
-      if (config.cors.widgetOrigins.includes(origin)) return cb(null, true);
-      cb(new Error(`origin ${origin} not allowed`));
-    },
-    credentials: false,
-  });
+  // The iframe served at /widget/ runs on the api's own origin. Its
+  // crossorigin-attributed asset requests carry an Origin header, so the
+  // CORS check has to recognise "same as the request host" without
+  // baking the public hostname (Cloud Run / localhost / etc) into the
+  // env. We resolve same-origin per request from the proxy headers.
+  const widgetCors: express.RequestHandler = (req, res, next) => {
+    const xfProto = req.headers["x-forwarded-proto"];
+    const proto =
+      (Array.isArray(xfProto) ? xfProto[0] : xfProto)?.split(",")[0]?.trim() ||
+      (req.secure ? "https" : "http");
+    const host = req.headers.host;
+    const sameOrigin = host ? `${proto}://${host}` : null;
+
+    cors({
+      origin: (origin, cb) => {
+        if (!origin) return cb(null, true);
+        if (sameOrigin && origin === sameOrigin) return cb(null, true);
+        if (config.cors.widgetOrigins.length === 0) return cb(null, true); // dev default
+        if (config.cors.widgetOrigins.includes(origin)) return cb(null, true);
+        cb(new Error(`origin ${origin} not allowed`));
+      },
+      credentials: false,
+    })(req, res, next);
+  };
 
   const dashboardCors = cors({
     origin: config.cors.dashboardOrigin ?? true,
     credentials: false,
   });
 
-  // Widget-facing routes: session init, chat SSE, JSON alias, and the loader/iframe statics.
+  // Widget-facing routes: session init, chat SSE, JSON alias and the loader/iframe statics.
   const widgetRouter: ReturnType<typeof Router> = Router();
   widgetRouter.use(widgetCors);
   widgetRouter.use(buildSessionInitRouter(sessions));
@@ -83,6 +102,7 @@ export function createApp({
       github,
       fixtures,
       productRepoPath,
+      productRepoBaseBranch,
     }),
   );
   if (!skipWidgetStatic) {
@@ -94,8 +114,19 @@ export function createApp({
   // Dashboard-facing routes: health + /sessions reads.
   const dashboardRouter: ReturnType<typeof Router> = Router();
   dashboardRouter.use(dashboardCors);
-  dashboardRouter.use(buildHealthRouter(config, retriever));
+  dashboardRouter.use(
+    buildHealthRouter({
+      config,
+      retriever,
+      claudeMode: claude?.mode ?? config.claude.mode,
+      shortcutMode: shortcut?.mode ?? config.shortcut.mode,
+      githubMode: github?.mode ?? config.github.mode,
+    }),
+  );
   dashboardRouter.use(buildSessionReadRouter(sessions));
+  if (!skipWidgetStatic) {
+    dashboardRouter.use(buildDashboardRouter());
+  }
   app.use(dashboardRouter);
 
   logger.info(

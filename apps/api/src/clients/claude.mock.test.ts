@@ -98,7 +98,7 @@ describe("createMockClaudeClient", () => {
       },
       resolution: {
         explanation: "clear answer",
-        workaround: "—",
+        workaround: "-",
         confidence: "high",
         citations: [],
       },
@@ -109,7 +109,7 @@ describe("createMockClaudeClient", () => {
     expect(inv.rootCause).toMatch(/mock fallback/i);
   });
 
-  it("is deterministic — same input produces same output", async () => {
+  it("is deterministic - same input produces same output", async () => {
     await write({
       slug: "d",
       keywords: ["deterministic"],

@@ -35,7 +35,7 @@ describe("InMemorySessionStore", () => {
     expect(store.has(s.sessionId)).toBe(true);
   });
 
-  it("records messages, traces, tickets, and reflects them in detail + summary", () => {
+  it("records messages, traces, tickets and reflects them in detail + summary", () => {
     const store = new InMemorySessionStore();
     const s = store.create("acme-app");
     store.appendMessage(s.sessionId, message("m1", "hi"));

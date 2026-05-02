@@ -43,7 +43,7 @@ export interface Suggestion {
  * Reads the host-provided suggestion chips from the iframe URL.
  * Loader script's `data-suggestions` attribute is JSON-encoded and
  * forwarded as a query param. Returns an empty array when nothing is
- * configured — the widget falls back to its own no-chip empty state.
+ * configured - the widget falls back to its own no-chip empty state.
  */
 export function readSuggestionsFromUrl(
   search: string = location.search,

@@ -70,7 +70,7 @@ export function PhaseTimeline({ events }: Props) {
                 <span className="font-mono text-xs tabular-nums text-fg-2">
                   {event.durationMs !== undefined
                     ? `${event.durationMs}ms`
-                    : "—"}
+                    : "-"}
                 </span>
               </div>
               <div className="mt-0.5 flex items-center gap-2">

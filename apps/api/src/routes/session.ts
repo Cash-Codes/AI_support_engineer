@@ -6,7 +6,7 @@ const InitBody = z.object({
   product: z.string().min(1).max(100),
 });
 
-/** POST /session/init — called by the widget (widget CORS). */
+/** POST /session/init - called by the widget (widget CORS). */
 export function buildSessionInitRouter(store: SessionStore): RouterType {
   const router: RouterType = Router();
   router.post("/session/init", (req, res) => {
@@ -23,7 +23,7 @@ export function buildSessionInitRouter(store: SessionStore): RouterType {
   return router;
 }
 
-/** GET /sessions, GET /sessions/:id — read-only, called by the dashboard. */
+/** GET /sessions, GET /sessions/:id - read-only, called by the dashboard. */
 export function buildSessionReadRouter(store: SessionStore): RouterType {
   const router: RouterType = Router();
 

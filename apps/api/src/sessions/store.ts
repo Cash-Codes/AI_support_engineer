@@ -38,7 +38,7 @@ interface SessionRecord {
 
 export const DEFAULT_MAX_SESSIONS = 500;
 
-/** In-memory `SessionStore` — fast, ephemeral, used for tests + dev w/o persistence. */
+/** In-memory `SessionStore` - fast, ephemeral, used for tests + dev w/o persistence. */
 export class InMemorySessionStore implements SessionStore {
   private readonly records = new Map<string, SessionRecord>();
   private readonly maxSessions: number;

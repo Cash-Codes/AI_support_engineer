@@ -11,9 +11,10 @@ import type { CodeInvestigationResult } from "../orchestrator/codeInvestigation.
 import type { ResolutionResult } from "../orchestrator/resolution.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Fixtures live at repo-root `fixtures/mock-responses/`. From both the tsx
-// source path (apps/api/src/fixtures) and the tsc output path
-// (apps/api/dist/fixtures), the repo root is exactly four levels up.
+// Default location: repo-root `fixtures/mock-responses/`. This package
+// itself ships no fixtures - the directory is empty out of the box.
+// Cloud-Run-style demos can point `FIXTURES_DIR` at a product-specific
+// fixtures folder (e.g. `/path/to/pulsefile/fixtures/mock-responses`).
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const DEFAULT_FIXTURES_DIR = path.resolve(REPO_ROOT, "fixtures/mock-responses");
 
@@ -40,22 +41,26 @@ export interface FixtureLibrary {
   fallback(): Fixture;
 }
 
-/** Generic fallback when no keyword matches — keeps pipelines honest. */
+/**
+ * Generic fallback when no fixture matches and no live LLM is configured.
+ * Used by the Cloud-Run-style demo deploy where Claude credentials aren't
+ * mounted - keeps the pipeline honest about what's running.
+ */
 const FALLBACK: Fixture = {
   slug: "no-match",
   keywords: [],
   router: {
     escalate: false,
-    rationale: "No matching fixture; returning a best-effort generic response.",
+    rationale: "No matching fixture and no live LLM is configured.",
     confidence: "low",
     draftAnswer:
-      "I couldn't reproduce what you're describing against our docs or code. Could you share a screenshot of the review table and the time you saw the issue?",
+      "This support agent is running in demo mode without a live LLM connected, so I can't fully investigate your question. In a deployed setup with Claude credentials available, I would search the docs, run a code investigation if needed and respond with a workaround plus an optional ticket and PR.",
   },
   resolution: {
     explanation:
-      "I couldn't match this issue to a known scenario. If you're seeing an unexpected behavior, please share the session id and any console errors and we'll dig in.",
+      "Running in demo mode - no live LLM is connected, so this response is a generic placeholder. With credentials configured, the agent would synthesize a real answer from your docs and (if needed) code.",
     workaround:
-      "Try reloading the page and re-running the flow; if it persists, open a support chat with your session id.",
+      "Try one of the suggested questions if your host page provided any, or run the agent locally with `claude login` and the relevant integration tokens to see the live pipeline.",
     confidence: "low" as Confidence,
     citations: [],
   },

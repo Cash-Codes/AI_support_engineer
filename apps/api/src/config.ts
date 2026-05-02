@@ -29,12 +29,19 @@ const EnvSchema = z.object({
     .transform((v) => v === "true"),
   PRODUCT_REPO_PATH: z.string().optional(),
   PRODUCT_REPO_URL: z.string().optional(),
+  PRODUCT_REPO_BASE_BRANCH: z.string().default("main"),
   DOCS_DIR: z.string().optional(),
   RAG_CACHE_PATH: z.string().optional(),
+  DATABASE_PATH: z.string().optional(),
+  FIXTURES_DIR: z.string().optional(),
   WIDGET_ALLOWED_ORIGINS: z.string().optional(),
   DASHBOARD_ORIGIN: z.string().optional(),
   SHORTCUT_API_TOKEN: z.string().optional(),
-  SHORTCUT_WORKSPACE: z.string().optional(),
+  SHORTCUT_BASE_URL: z
+    .string()
+    .url()
+    .default("https://api.app.shortcut.com/api/v3"),
+  SHORTCUT_WORKSPACE_SLUG: z.string().optional(),
   SHORTCUT_WORKFLOW_STATE_ID: z
     .string()
     .optional()
@@ -53,18 +60,23 @@ export interface AppConfig {
   logLevel: LogLevel;
   demoMode: boolean;
   enablePrFlow: boolean;
-  productRepo: { path?: string; url?: string };
+  productRepo: { path?: string; url?: string; baseBranch: string };
   rag: { docsDir?: string; cachePath?: string };
+  database: { path?: string };
+  fixtures: { dir?: string };
   cors: { widgetOrigins: string[]; dashboardOrigin?: string };
   claude: { mode: "live" | "mock" };
-  shortcut:
+  shortcut: {
+    apiBase: string;
+    workspaceSlug?: string;
+  } & (
     | { mode: "mock" }
     | {
         mode: "live";
         token: string;
-        workspace?: string;
         workflowStateId?: number;
-      };
+      }
+  );
   github: { mode: "mock" } | { mode: "live"; token: string; repo: string };
 }
 
@@ -75,14 +87,18 @@ export function parseConfig(raw: NodeJS.ProcessEnv): AppConfig {
   }
   const env = EnvSchema.parse(normalized);
 
+  const shortcutBase = {
+    apiBase: env.SHORTCUT_BASE_URL,
+    workspaceSlug: env.SHORTCUT_WORKSPACE_SLUG,
+  };
   const shortcut: AppConfig["shortcut"] = env.SHORTCUT_API_TOKEN
     ? {
+        ...shortcutBase,
         mode: "live",
         token: env.SHORTCUT_API_TOKEN,
-        workspace: env.SHORTCUT_WORKSPACE,
         workflowStateId: env.SHORTCUT_WORKFLOW_STATE_ID,
       }
-    : { mode: "mock" };
+    : { ...shortcutBase, mode: "mock" };
 
   const github: AppConfig["github"] =
     env.ENABLE_PR_FLOW && env.GITHUB_TOKEN && env.GITHUB_REPO
@@ -101,10 +117,17 @@ export function parseConfig(raw: NodeJS.ProcessEnv): AppConfig {
     productRepo: {
       path: env.PRODUCT_REPO_PATH,
       url: env.PRODUCT_REPO_URL,
+      baseBranch: env.PRODUCT_REPO_BASE_BRANCH,
     },
     rag: {
       docsDir: env.DOCS_DIR,
       cachePath: env.RAG_CACHE_PATH,
+    },
+    database: {
+      path: env.DATABASE_PATH,
+    },
+    fixtures: {
+      dir: env.FIXTURES_DIR,
     },
     cors: {
       widgetOrigins: csv(env.WIDGET_ALLOWED_ORIGINS),

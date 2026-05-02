@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("ChatWindow", () => {
-  it("sends a message, shows user bubble, timeline, and assistant reply", async () => {
+  it("sends a message, shows user bubble, timeline and assistant reply", async () => {
     const frames = [
       'event: phase\ndata: {"phase":"intake","status":"completed","durationMs":2}\n\n',
       'event: phase\ndata: {"phase":"docsRetrieval","status":"completed","durationMs":5}\n\n',

@@ -7,14 +7,14 @@ export interface ComposeTicketInput {
   intake: IntakeResult;
   resolution: ResolutionResult;
   investigation: CodeInvestigationResult | null;
-  /** Optional fixture-authored title/body — wins over the composed default. */
+  /** Optional fixture-authored title/body - wins over the composed default. */
   preformed?: { title: string; body: string };
 }
 
 /**
  * Builds a structured ticket draft from pipeline outputs. Used by both the
  * live Shortcut client (which POSTs the draft) and the mock client (which
- * just echoes an identity). Pure function — trivial to unit test.
+ * just echoes an identity). Pure function - trivial to unit test.
  */
 export function composeTicket(input: ComposeTicketInput): TicketDraft {
   const { intake, resolution, investigation, preformed } = input;

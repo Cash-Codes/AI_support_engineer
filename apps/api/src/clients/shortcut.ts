@@ -13,7 +13,7 @@ export interface ShortcutClient {
 
 export interface CreateLiveShortcutClientOptions {
   apiToken: string;
-  /** Required by most Shortcut workspaces — optional here with a clear error. */
+  /** Required by most Shortcut workspaces - optional here with a clear error. */
   workflowStateId?: number;
   /** Base URL override (for tests); defaults to production. */
   apiBase?: string;
@@ -32,7 +32,7 @@ interface ShortcutStoryResponse {
 }
 
 /**
- * Live Shortcut client — POSTs to /api/v3/stories with the
+ * Live Shortcut client - POSTs to /api/v3/stories with the
  * `Shortcut-Token` header. Throws on network / auth / 4xx-5xx failures
  * so the orchestrator surfaces `ticketing: failed` and the rest of the
  * pipeline continues.
@@ -77,7 +77,7 @@ export function createLiveShortcutClient(
         const json = (await res.json()) as Partial<ShortcutStoryResponse>;
         if (!json.id || !json.app_url) {
           throw new Error(
-            "shortcut: response missing id or app_url — API contract changed?",
+            "shortcut: response missing id or app_url - API contract changed?",
           );
         }
         opts.logger?.info(

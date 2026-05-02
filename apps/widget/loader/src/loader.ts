@@ -209,8 +209,8 @@ export function mount(
 
 if (typeof document !== "undefined" && !("VITEST" in globalThis)) {
   // `document.currentScript` is only valid synchronously while the
-  // script is executing — inside a DOMContentLoaded callback it returns
-  // null. Capture it here, in the IIFE, and close over it.
+  // script is executing - inside a DOMContentLoaded callback it returns
+  // null. Capture it here, in the IIFE and close over it.
   const script = document.currentScript as HTMLScriptElement | null;
   const run = () => mount(readConfigFromScript(script));
   if (document.readyState === "loading") {
