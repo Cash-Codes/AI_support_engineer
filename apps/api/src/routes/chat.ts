@@ -1,0 +1,296 @@
+import { randomUUID } from "node:crypto";
+import type { ChatMessage, ChatResponse, PhaseEvent } from "@ai-support/shared";
+import { Router, type Router as RouterType } from "express";
+import { z } from "zod";
+import type { ClaudeClient } from "../clients/claude.js";
+import type { GithubClient } from "../clients/github.js";
+import type { ShortcutClient } from "../clients/shortcut.js";
+import type { AppConfig } from "../config.js";
+import { type FixtureLibrary, buildMockPR } from "../fixtures/index.js";
+import type { Logger } from "../logger.js";
+import { composeTicket } from "../orchestrator/composeTicket.js";
+import { type PipelineOverrides, runPipeline } from "../orchestrator/index.js";
+import { runOpenFixPR } from "../orchestrator/openFixPR/index.js";
+import type { Retriever } from "../rag/indexer.js";
+import type { SessionStore } from "../sessions/store.js";
+
+const ChatBody = z.object({
+  sessionId: z.string().min(1),
+  message: z.string().min(1).max(4000),
+});
+
+const SupportQueryBody = z.object({
+  sessionId: z.string().min(1).optional(),
+  product: z.string().min(1).max(100).optional(),
+  message: z.string().min(1).max(4000),
+});
+
+export interface ChatRouterDeps {
+  config: AppConfig;
+  logger: Logger;
+  sessions: SessionStore;
+  retriever?: Retriever;
+  claude?: ClaudeClient;
+  shortcut?: ShortcutClient;
+  github?: GithubClient;
+  fixtures?: FixtureLibrary;
+  /** Required for the live PR flow - absolute path to the product repo. */
+  productRepoPath?: string;
+  /** Base branch the openFixPR worktree forks from. Defaults to "main". */
+  productRepoBaseBranch?: string;
+}
+
+export function buildChatRouter(deps: ChatRouterDeps): RouterType {
+  const {
+    config,
+    logger,
+    sessions,
+    retriever,
+    claude,
+    shortcut,
+    github,
+    fixtures,
+    productRepoPath,
+    productRepoBaseBranch,
+  } = deps;
+  const router: RouterType = Router();
+
+  const overrides = buildPipelineOverrides({
+    retriever,
+    claude,
+    shortcut,
+    github,
+    fixtures,
+    productRepoPath,
+    productRepoBaseBranch,
+    logger,
+  });
+
+  router.post("/chat", async (req, res) => {
+    const parsed = ChatBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: "invalid body", details: parsed.error.flatten() });
+      return;
+    }
+    const { sessionId, message } = parsed.data;
+
+    if (!sessions.has(sessionId)) {
+      res.status(404).json({ error: "session not found" });
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    const writeFrame = (event: string, data: unknown) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const userMessage: ChatMessage = {
+      id: randomUUID(),
+      role: "user",
+      content: message,
+      createdAt: new Date().toISOString(),
+    };
+    sessions.appendMessage(sessionId, userMessage);
+
+    const emit = (e: PhaseEvent) => writeFrame("phase", e);
+
+    try {
+      const response = await runPipeline(
+        { message },
+        {
+          sessionId,
+          flags: { prFlow: config.enablePrFlow },
+          emit,
+          logger,
+          overrides,
+        },
+      );
+      sessions.appendMessage(sessionId, response.assistantMessage);
+      sessions.appendTrace(sessionId, response.pipeline);
+      if (response.ticket) sessions.appendTicket(sessionId, response.ticket);
+      if (response.pr) sessions.appendPR(sessionId, response.pr);
+      writeFrame("complete", response);
+    } catch (err) {
+      logger.error({ err }, "pipeline failed");
+      writeFrame("error", {
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      res.end();
+    }
+  });
+
+  // Plain-JSON alias - waits for pipeline to complete, returns ChatResponse.
+  router.post("/api/support/query", async (req, res) => {
+    const parsed = SupportQueryBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: "invalid body", details: parsed.error.flatten() });
+      return;
+    }
+    const { sessionId: inputSession, product, message } = parsed.data;
+
+    const sessionId =
+      inputSession && sessions.has(inputSession)
+        ? inputSession
+        : sessions.create(product ?? "unknown").sessionId;
+
+    const userMessage: ChatMessage = {
+      id: randomUUID(),
+      role: "user",
+      content: message,
+      createdAt: new Date().toISOString(),
+    };
+    sessions.appendMessage(sessionId, userMessage);
+
+    try {
+      const response: ChatResponse = await runPipeline(
+        { message },
+        {
+          sessionId,
+          flags: { prFlow: config.enablePrFlow },
+          emit: () => undefined,
+          logger,
+          overrides,
+        },
+      );
+      sessions.appendMessage(sessionId, response.assistantMessage);
+      sessions.appendTrace(sessionId, response.pipeline);
+      if (response.ticket) sessions.appendTicket(sessionId, response.ticket);
+      if (response.pr) sessions.appendPR(sessionId, response.pr);
+      res.json(response);
+    } catch (err) {
+      logger.error({ err }, "api/support/query pipeline failed");
+      res.status(500).json({
+        error: "pipeline failed",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  });
+
+  return router;
+}
+
+interface OverridesDeps {
+  retriever?: Retriever;
+  claude?: ClaudeClient;
+  shortcut?: ShortcutClient;
+  github?: GithubClient;
+  fixtures?: FixtureLibrary;
+  productRepoPath?: string;
+  productRepoBaseBranch?: string;
+  logger: Logger;
+}
+
+function buildPipelineOverrides(
+  deps: OverridesDeps,
+): PipelineOverrides | undefined {
+  const {
+    retriever,
+    claude,
+    shortcut,
+    github,
+    fixtures,
+    productRepoPath,
+    productRepoBaseBranch,
+    logger,
+  } = deps;
+  const hasAny = retriever || claude || shortcut || github || fixtures;
+  if (!hasAny) return undefined;
+
+  const overrides: PipelineOverrides = {};
+
+  if (retriever) {
+    overrides.docsRetrieval = async (intake) => ({
+      docs: await retriever.search(intake.normalized, 5),
+    });
+  }
+
+  if (claude) {
+    overrides.router = (intake, retrieved) => claude.route(intake, retrieved);
+    overrides.codeInvestigation = (intake, retrieved) =>
+      claude.investigate(intake, retrieved);
+    overrides.resolution = (intake, retrieved, decision, investigation) =>
+      claude.synthesize(intake, retrieved, decision, investigation);
+  }
+
+  if (shortcut) {
+    overrides.ticketing = async (resolution, investigation, intake) => {
+      // If a fixture matches this scenario and provides a preformed
+      // title/body, use it - demo-quality wording takes precedence.
+      const fix = fixtures
+        ? findFixtureByResolution(fixtures, resolution)
+        : undefined;
+      const draft = composeTicket({
+        intake,
+        resolution,
+        investigation,
+        preformed: fix?.ticket,
+      });
+      return shortcut.createStory(draft);
+    };
+  }
+
+  // openFixPR routing:
+  //   live path  - both Claude and GitHub clients are live AND the
+  //                product repo path is set: spawn the real fix agent.
+  //   fixture path - fall back to the fixture's preformed PR data so
+  //                  demos keep working without git/gh tooling.
+  const liveFixPath =
+    claude?.mode === "live" &&
+    github?.mode === "live" &&
+    typeof productRepoPath === "string";
+
+  if (liveFixPath && github && productRepoPath) {
+    overrides.openFixPR = async (resolution, investigation, intake) => {
+      if (!investigation) return null;
+      return runOpenFixPR(
+        { intake, resolution, investigation },
+        {
+          productRepoPath,
+          baseBranch: productRepoBaseBranch,
+          github,
+          logger,
+        },
+      );
+    };
+  } else if (fixtures) {
+    overrides.openFixPR = async (resolution) => {
+      const fix = findFixtureByResolution(fixtures, resolution);
+      return fix ? (buildMockPR(fix) ?? null) : null;
+    };
+  }
+
+  return overrides;
+}
+
+/**
+ * Matches the resolution back to a fixture via its citations. Fixtures cite
+ * doc filenames; we correlate by citation membership. Falls back to the
+ * first fixture whose explanation prefix matches - best-effort, only used
+ * for ticket/PR metadata.
+ */
+function findFixtureByResolution(
+  fixtures: FixtureLibrary,
+  resolution: { explanation: string; citations: string[] },
+) {
+  const all = fixtures.all();
+  for (const f of all) {
+    if (f.resolution.explanation === resolution.explanation) return f;
+  }
+  for (const f of all) {
+    const overlap = f.resolution.citations.some((c) =>
+      resolution.citations.includes(c),
+    );
+    if (overlap) return f;
+  }
+  return undefined;
+}

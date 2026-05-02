@@ -1,0 +1,48 @@
+{
+  "slug": "http-ok-despite-content-match-fail",
+  "keywords": [
+    "content match fail but http",
+    "content match shows fail",
+    "content match didn't pass",
+    "content-match",
+    "http check still ok",
+    "http check still shows ok",
+    "http status reflect content",
+    "expected content was missing",
+    "http says ok",
+    "should the http reflect"
+  ],
+  "router": {
+    "escalate": true,
+    "rationale": "The docs describe the intended behavior of both checks but don't explain why a failed content match leaves the HTTP check green. The interaction lives in the orchestrator and the HTTP check function - a code-level finding is needed to confirm whether this is a configuration nuance or a real bug.",
+    "confidence": "high"
+  },
+  "codeInvestigation": {
+    "rootCause": "src/checks/runHttpCheck.ts accepts an `expectedMatched` field on its input interface (line 7) and src/server/orchestrator.ts faithfully passes it in (line 64) - but the function body never reads `input.expectedMatched`. The status decision is made purely from the HTTP status code (lines 13-19), so a 2xx response always reports `ok` regardless of whether the content match passed, failed, or was not configured. The `expectedMatched` value is plumbed through dead - accepted at the input boundary, dropped on the floor.",
+    "affectedFiles": [
+      "src/checks/runHttpCheck.ts",
+      "src/server/orchestrator.ts"
+    ],
+    "workaround": "Read the `content` check status independently of the `http` check status - both are returned in the report and the `content` outcome correctly reflects the match. For users disputing the composite score, keep in mind that a failing content match still pulls the composite down via the `content` weight, so the overall grade does reflect the failure even though the `http` tile shows green.",
+    "confidence": "high"
+  },
+  "resolution": {
+    "explanation": "There's a real plumbing bug in `src/checks/runHttpCheck.ts`. The function's input interface declares `expectedMatched: boolean | null` and the orchestrator passes the content-match result into it on every call. But the function body never references that field - the status decision is computed purely from the HTTP status code. So a request that returns 200 with the wrong content (a maintenance page, a cached error page, the wrong app) shows `http: ok` while `content: fail` next to it. The composite score still reflects the failure because the `content` check is weighted independently, but the per-tile UI tells inconsistent stories.",
+    "workaround": "Until the fix lands, treat the `content` check tile as the authoritative signal for whether the response body matches what you expect - the `http` tile is HTTP-status-only in the current build. Pulsefile's composite score and grade already factor the content-match outcome in via the `content` weight, so the overall verdict is correct even when the HTTP tile looks misleadingly green.",
+    "confidence": "high",
+    "citations": [
+      "checks/http.md",
+      "checks/content-match.md",
+      "product-overview.md"
+    ]
+  },
+  "ticket": {
+    "title": "HTTP check ignores content-match result, can show ok with content fail",
+    "body": "## Symptom\nA Pulse Check report on a 2xx response with a failed content-match shows `http: ok` next to `content: fail`. Per-tile signals are inconsistent.\n\n## Root cause\n`src/checks/runHttpCheck.ts` declares `expectedMatched: boolean | null` on its `RunHttpCheckInput` (line 7) and `src/server/orchestrator.ts:64` passes the content-match result in. The function body never reads it - the status decision is HTTP-status-only.\n\n## Proposed fix\nGate `status = 'ok'` on `input.expectedMatched !== false` (i.e. unset or true). When the upstream content match is `false`, downgrade to `warn`. The composite score is unaffected; the HTTP tile becomes consistent with the content tile.\n\n## Out of scope\nNot revisiting whether HTTP and content should be merged into a single check - they remain separate dimensions. This ticket is purely about the dropped input field."
+  },
+  "pr": {
+    "branch": "fix/http-honors-content-match",
+    "title": "fix: runHttpCheck honors expectedMatched in status decision",
+    "summary": "`runHttpCheck` accepted `expectedMatched` on its input interface but never read it. Orchestrator passes it in correctly; the value was dropped. Now downgrades a 2xx to `warn` when `expectedMatched === false`. Adds a regression test for that case."
+  }
+}
